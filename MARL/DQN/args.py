@@ -1,0 +1,10 @@
+BATCH_SIZE = 128
+GAMMA = 0.99
+EPS_START = 0.95
+EPS_END = 0.05
+EPS_DECAY = 2000
+TAU = 0.01
+LR = 1e-4
+EPISODE = 1200
+DEVICE = 'cpu'
+MODEL_PATH = './models/policy_net.pt'
