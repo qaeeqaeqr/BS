@@ -11,21 +11,12 @@
 \begin{document}
 
 \maketitle
+\author{王钰}
 
-note：这里只考虑VDN和CTD论文里的vanilla公式
-
-\section{VDN}
-
-
-每个智能体通过DQN来根据$observation_i$选取$action_i$，并计算$q_i$。
-各个智能体的 q值之和 与 reward 做loss，完成训练。
-
-\section{CTD}
-
-用第一个Q-learning预测$V^{\pi}(s_t)$的**均值**，用第二个Q-learning根据第一个Q-learning
-的TD-error预测$V^{\pi}(s_t)$的方差。
 
 \section{VDN+CTD 公式推导}
+
+注：这里只考虑VDN和CTD中的Vanilla情况。
 
 \subsection{MDP}
 
@@ -91,13 +82,13 @@ $$V^{\pi}(s_t) = r_{t+1} + \gamma V^{\pi}(s_{t+1})$$
 其中$r_{t+1} + \gamma V^{\pi}(s_{t+1})$被称为TD目标，
 是即时奖励和下一个状态的价值的无偏估计，用于近似贝尔曼方程中的期望值。
 
-根据TD目标，可定义TD误差$\delta_t$为$r_{t+1} + \gamma V^{\pi}(s_{t+1}) - V^{\pi}(s_t)$。
+根据TD目标，可定义TD误差$\delta_{vt}$为$r_{t+1} + \gamma V^{\pi}(s_{t+1}) - V^{\pi}(s_t)$。
 TD误差项表示实际获得的回报与预期回报之间的差异。
 
 利用TD误差，可以推导出更新当前的状态价值函数的公式：
 
 \begin{align*}
-	V^{\pi}(s_t) &= V^{\pi}(s_t) + \alpha \times \delta_t  \\
+	V^{\pi}(s_t) &= V^{\pi}(s_t) + \alpha \times \delta_{vt}  \\
 	&= V^{\pi}(s_t) + \alpha (r_{t+1} + \gamma V^{\pi}(s_{t+1}) - V^{\pi}(s_t))
 \end{align*}
 
@@ -113,11 +104,50 @@ $$
 Q^{\pi}(s_t, a_t) = Q^{\pi}(s_t, a_t) + \alpha (r_{t+1} + \gamma Q^{\pi}(s_{t+1}, a_{t+1}) - Q^{\pi}(s_t, a_t))
 $$
 
-其中$\alpha$是学习率，控制状态-动作价值函数的更新速度。
+其中$\alpha$是学习率，控制状态-动作价值函数的更新速度；可定义TD误差$\delta_{qt}$为$r_{t+1} + \gamma Q^{\pi}(s_{t+1}, a_{t+1}) - Q^{\pi}(s_t, a_t)$。
 
-\subsection{todo}
+\subsection{CTD}
 
-CTD DQN VDN
+\subsubsection{用于计算方差的价值函数推导}
+
+根据定义$V^{\pi}(s_t) = \mathbb{E}[G^{\pi}(s_t)]$，前面的推导可以获得计算在状态$s_t$下的回报的均值。接下来，要推导出可以计算在状态$s_t$下的回报的方差$\bar{V}^{\pi}(s_t)$。
+
+首先，对回报的方差$\mathbb{V}[G^{\pi}(s_t)]$进行推导：
+
+\begin{align*}
+	\mathbb{V}[G^{\pi}(s_t)] &= \mathbb{E}[ G^{\pi}(s_{t}) - \mathbb{E}[G^{\pi}(s_t)]]^2 \\
+	&= \mathbb{E}[r_{t+1} + G^{\pi}(s_{t+1}) - \mathbb{E}[G^{\pi}(s_t)]]^2 \\
+	&= \mathbb{E}[r_{t+1} + G^{\pi}(s_{t+1}) - V^{\pi}(s_t)]^2 \\
+	&= \mathbb{E}[r_{t+1} + G^{\pi}(s_{t+1}) - V^{\pi}(s_t) + V^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1})]^2 \\
+	&= \mathbb{E}[(r_{t+1} + V^{\pi}(s_{t+1}) - V^{\pi}(s_t)) + (G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1}))]^2 \\
+	&= \mathbb{E}[r_{t+1} + V^{\pi}(s_{t+1}) - V^{\pi}(s_t)]^2 + \mathbb{E}[G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1})]^2 \\
+	&\qquad+ 2 \times \mathbb{E}[r_{t+1} + V^{\pi}(s_{t+1}) - V^{\pi}(s_t)] \times  \mathbb{E}[G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1})] \\
+	&= \mathbb{E}[r_{t+1} + V^{\pi}(s_{t+1}) - V^{\pi}(s_t)]^2 + \mathbb{V}[G^{\pi}(s_{t+1})] \\
+	&\qquad + 2 \times \mathbb{E}[r_{t+1} + V^{\pi}(s_{t+1}) - V^{\pi}(s_t)] \times 0 \\
+	&= \mathbb{E}[\delta_{vt}]^2 + \mathbb{V}[G^{\pi}(s_{t+1})] \\
+\end{align*}
+
+其中，$\mathbb{V}$表示计算某个变量的方差，根据先前的定义，$\mathbb{E}[G^{\pi}(s_t)] = V^{\pi}(s_t)$...（论文里这里每行推导都可以细讲）。
+
+回顾TD学习，用于计算回报的均值的状态价值函数的贝尔曼方程为：$V^{\pi}(s_t) = r_{t+1} + \gamma V^{\pi}(s_{t+1})$；用于计算回报的均值的状态价值函数的更新公式为：$V^{\pi}(s_t) = V^{\pi}(s_t) + \alpha (r_{t+1} + \gamma V^{\pi}(s_{t+1}) - V^{\pi}(s_t))$。因此，根据以上关于$\mathbb{V}[G^{\pi}(s_t)]$的推导，可得出用于计算回报的方差的状态价值函数的更新公式为：
+
+$$
+\bar{V}^{\pi}(s_t) = \bar{V}^{\pi}(s_t) + \bar{\alpha}(\delta_{vt}^2 + \bar{V}^{\pi}(s_{t+1}) - \bar{V}^{\pi}(s_t))
+$$
+
+在这里，我们采用了TD学习中的常用技术，用智能体与环境交互中实际计算的$\delta_{vt}^2$来代替$\mathbb{E}[\delta_{vt}]^2$。类似的，可以得到用于计算回报的方差的状态-动作价值函数的更新公式为：
+
+$$
+\bar{Q}^{\pi}(s_t, a_t) = \bar{Q}^{\pi}(s_t, a_t) + \bar{\alpha}(\delta_{qt}^2 + \bar{Q}^{\pi}(s_{t+1}, a_{t+1}) - \bar{Q}^{\pi}(s_t, a_t))
+$$
+
+
+\subsection{DQN}
+
+
+
+
+\subsection{VDN}
 
 	
 	

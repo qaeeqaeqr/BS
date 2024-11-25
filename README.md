@@ -2,5 +2,14 @@
 
 > author: 王钰
 
+### Introduction
+
+本项目主要将CTD对于回报的均值和方差的预测扩展到了多智能体的情况。
+
+### Project
+
+[assets](./assets)中包含多智能体均值-方差线性组合最小算法的公式推导的tex文档。
+
+[docs](./docs)中包含毕业设计的过程文档。
 
 
