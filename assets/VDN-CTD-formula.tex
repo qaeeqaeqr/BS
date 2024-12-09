@@ -14,9 +14,9 @@
 \author{王钰}
 
 
-\section{VDN+CTD 公式推导}
+\section{公式推导}
 
-注：这里只考虑VDN和CTD中的Vanilla情况。
+注：由于不考虑复杂环境，所以没有考虑DQN和VDN中的RNN，也没有考虑CTD$(\lambda)$。
 
 \subsection{MDP}
 
@@ -118,37 +118,107 @@ $$
 	\mathbb{V}[G^{\pi}(s_t)] &= \mathbb{E}[ G^{\pi}(s_{t}) - \mathbb{E}[G^{\pi}(s_t)]]^2 \\
 	&= \mathbb{E}[r_{t+1} + G^{\pi}(s_{t+1}) - \mathbb{E}[G^{\pi}(s_t)]]^2 \\
 	&= \mathbb{E}[r_{t+1} + G^{\pi}(s_{t+1}) - V^{\pi}(s_t)]^2 \\
-	&= \mathbb{E}[r_{t+1} + G^{\pi}(s_{t+1}) - V^{\pi}(s_t) + V^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1})]^2 \\
-	&= \mathbb{E}[(r_{t+1} + V^{\pi}(s_{t+1}) - V^{\pi}(s_t)) + (G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1}))]^2 \\
-	&= \mathbb{E}[r_{t+1} + V^{\pi}(s_{t+1}) - V^{\pi}(s_t)]^2 + \mathbb{E}[G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1})]^2 \\
-	&\qquad+ 2 \times \mathbb{E}[r_{t+1} + V^{\pi}(s_{t+1}) - V^{\pi}(s_t)] \times  \mathbb{E}[G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1})] \\
-	&= \mathbb{E}[r_{t+1} + V^{\pi}(s_{t+1}) - V^{\pi}(s_t)]^2 + \mathbb{V}[G^{\pi}(s_{t+1})] \\
-	&\qquad + 2 \times \mathbb{E}[r_{t+1} + V^{\pi}(s_{t+1}) - V^{\pi}(s_t)] \times 0 \\
-	&= \mathbb{E}[\delta_{vt}]^2 + \mathbb{V}[G^{\pi}(s_{t+1})] \\
+	&= \mathbb{E}[r_{t+1} + G^{\pi}(s_{t+1}) - V^{\pi}(s_t) + \gamma V^{\pi}(s_{t+1}) - \gamma V^{\pi}(s_{t+1})]^2 \\
+	&= \mathbb{E}[(r_{t+1} + \gamma V^{\pi}(s_{t+1}) - V^{\pi}(s_t)) + (G^{\pi}(s_{t+1}) - \gamma V^{\pi}(s_{t+1}))]^2 \\
+	&= \mathbb{E}[r_{t+1} + \gamma V^{\pi}(s_{t+1}) - V^{\pi}(s_t)]^2 + \mathbb{E}[G^{\pi}(s_{t+1}) - \gamma V^{\pi}(s_{t+1})]^2 \\
+	&\qquad + 2 \mathbb{E}[r_{t+1} + \gamma V^{\pi}(s_{t+1}) - V^{\pi}(s_t)]  \mathbb{E}[G^{\pi}(s_{t+1}) - \gamma V^{\pi}(s_{t+1})] \\
+	&= \mathbb{E}[\delta_{vt}]^2 + \mathbb{E}[G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1}) + (1 - \gamma) V^{\pi}(s_{t+1})]^2 \\
+	&\qquad + 2 \mathbb{E}[\delta_{vt}] \mathbb{E}[G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1}) + (1 - \gamma) V^{\pi}(s_{t+1})] \\
+	&= \mathbb{E}[\delta_{vt}]^2 + \mathbb{E}[G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1})]^2 + \mathbb{E}[(1 - \gamma) V^{\pi}(s_{t+1})]^2 + 2\mathbb{E}[G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1})] \\
+	&\qquad + 2 \mathbb{E}[\delta_{vt}] \mathbb{E}[G^{\pi}(s_{t+1}) - V^{\pi}(s_{t+1})] + 2 \mathbb{E}[\delta_{vt}] \mathbb{E}[(1 - \gamma) V^{\pi}(s_{t+1})] \\
+	&= \mathbb{E}[\delta_{vt}]^2 + \mathbb{V}[G^{\pi}(s_{t+1})] + (1 - \gamma) V^{\pi}(s_{t+1})^2 + 0 \\
+	&\qquad + 2 \mathbb{E}[\delta_{vt}] \times 0 + 2 \mathbb{E}[\delta_{vt}] (1 - \gamma) V^{\pi}(s_{t+1}) \\
+	&= \mathbb{E}[\delta_{vt}]^2 + \mathbb{V}[G^{\pi}(s_{t+1})] + (1-\gamma)V^{\pi}(s_{t+1}) (2\mathbb{E}[\delta_{vt}] + V^{\pi}(s_{t+1})) \\
+	&\approx \mathbb{E}[\delta_{vt}]^2 + \mathbb{V}[G^{\pi}(s_{t+1})] \\
 \end{align*}
 
-其中，$\mathbb{V}$表示计算某个变量的方差，根据先前的定义，$\mathbb{E}[G^{\pi}(s_t)] = V^{\pi}(s_t)$...（论文里这里每行推导都可以细讲）。
+（论文里这里每行推导都可以细讲）。最后，为了推导出关于回报的方差的贝尔曼方差，这里令$\gamma \approx 1$，所以，这里可以认为$(1-\gamma)V^{\pi}(s_{t+1}) (2\mathbb{E}[\delta_{vt}] + V^{\pi}(s_{t+1}))$是一个远小于$\mathbb{E}[\delta_{vt}]^2 + \mathbb{V}[G^{\pi}(s_{t+1})]$的数，因此在最终的公式中，忽视了$(1-\gamma)V^{\pi}(s_{t+1}) (2\mathbb{E}[\delta_{vt}] + V^{\pi}(s_{t+1}))$这项，最终得到回报的方差的贝尔曼方程。
 
-回顾TD学习，用于计算回报的均值的状态价值函数的贝尔曼方程为：$V^{\pi}(s_t) = r_{t+1} + \gamma V^{\pi}(s_{t+1})$；用于计算回报的均值的状态价值函数的更新公式为：$V^{\pi}(s_t) = V^{\pi}(s_t) + \alpha (r_{t+1} + \gamma V^{\pi}(s_{t+1}) - V^{\pi}(s_t))$。因此，根据以上关于$\mathbb{V}[G^{\pi}(s_t)]$的推导，可得出用于计算回报的方差的状态价值函数的更新公式为：
+回顾TD学习，用于计算回报的均值的状态价值函数的贝尔曼方程为：$V^{\pi}(s_t) = r_{t+1} + \gamma V^{\pi}(s_{t+1})$；用于计算回报的均值的状态价值函数的更新公式为：$V^{\pi}(s_t) = V^{\pi}(s_t) + \alpha (r_{t+1} + \gamma V^{\pi}(s_{t+1}) - V^{\pi}(s_t))$。因此，根据以上关于$\mathbb{V}[G^{\pi}(s_t)]$的推导，可得出用于计算回报的方差的状态价值函数$\bar{V}^{\pi}(s_t)$的更新公式为：
 
 $$
 \bar{V}^{\pi}(s_t) = \bar{V}^{\pi}(s_t) + \bar{\alpha}(\delta_{vt}^2 + \bar{V}^{\pi}(s_{t+1}) - \bar{V}^{\pi}(s_t))
 $$
 
-在这里，我们采用了TD学习中的常用技术，用智能体与环境交互中实际计算的$\delta_{vt}^2$来代替$\mathbb{E}[\delta_{vt}]^2$。类似的，可以得到用于计算回报的方差的状态-动作价值函数的更新公式为：
+在这里，我们采用了TD学习中的常用技术，用智能体与环境交互中实际计算的$\delta_{vt}^2$来代替$\mathbb{E}[\delta_{vt}]^2$。类似的，可以得到用于计算回报的方差的状态-动作价值函数$\bar{Q}^{\pi}(s_t, a_t)$的更新公式为：
 
 $$
 \bar{Q}^{\pi}(s_t, a_t) = \bar{Q}^{\pi}(s_t, a_t) + \bar{\alpha}(\delta_{qt}^2 + \bar{Q}^{\pi}(s_{t+1}, a_{t+1}) - \bar{Q}^{\pi}(s_t, a_t))
 $$
 
+\subsubsection{级联时序差分的动作选择策略}
 
-\subsection{DQN}
+这里的策略是$\epsilon$-贪心策略的改进版本。在所有动作集合中，我们认为使得回报的均值和方差的线性组合最大的动作是最优动作。记最优动作为$a^*$，则：
 
+$$a^* = \mathop{\arg\max}\limits_{a} (Q(s, a) - \zeta \sqrt{\bar{Q}(s, a)})$$
 
+其中最优动作$a^*$即为使$Q(s, a) - \zeta \sqrt{\bar{Q}(s, a)}$最小的动作。其中将均值和方差的线性组合作为优化目标，$\zeta$是一个大于0的数，$\zeta$越大，表示智能体更倾向于选择带来的回报的随机性更小的动作。
 
+在我们的策略中，设置参数$\epsilon \in (0, 1)$；智能体有$\epsilon$的概率选择最有动作，有$1-\epsilon$的概率随机选择一个可行的动作，这样就可以保证探索与利用的平衡。更进一步，在训练中，可以随着训练轮数的增加逐步增大$\epsilon$的值，在训练完成后，将$\epsilon$的值设置为很接近1的数。
 
-\subsection{VDN}
+\subsection{CTD+DQN}
 
-	
+\subsubsection{基于DNN的时序差分}
+
+在状态-动作空间过大时，维护一张Q表需要大量内存；因此，引入神经网络（Neural Network, NN）来拟合状态-动作价值函数。也就是说，让当前环境$s_t$作为NN的输入，NN输出所有的动作的对应的状态-动作价值函数。设神经网络的参数为$\theta_e$，则引入NN对状态-动作价值函数进行拟合可以表示为$Q^\pi(s_t, a_t, \theta_e)$。
+
+根据TD公式，可以得到在NN情况下的TD误差为：$r_{t+1} + \gamma Q^\pi(s_{t+1}, a_{t+1}, \theta_e) - Q^\pi(s_t, a_t, \theta_e)$。
+
+在时序差分中，TD误差是需要被优化的项，即让每次智能体与环境交互的TD误差尽可能小；这与NN的损失函数的设计十分相似。因此，为了优化网络参数$\theta_e$，可以将TD误差作为网络的损失函数。然而，在训练过程中，网络的参数的更新会导致$Q^\pi(s_{t+1}, a_{t+1}, \theta_e)$和$Q^\pi(s_t, a_t, \theta_e)$的值同时变化，这样会导致最终网络预测的Q值越来越大。因此，采用两个相同架构的网络分别预测当前和下一步的状态-动作价值函数。这里把预测当前状态-动作价值函数的网络称作预测网络，参数为$\theta_e$；预测下一步状态-动作价值函数的网络称作目标网络，参数为$\theta^-_e$。在更新参数时，只更新预测网络的参数，特定步数后，再把预测网络的参数拷贝给目标网络。
+
+为了用批次训练加快训练速度，采用经验回放的方法。首先构建一个经验池$U = {u_1, u_2, \cdots, u_n}$，经验池中的每一条经验是智能体与环境的一次交互，即$u_t = (s_t, a_t, r_{t+1}, s_{t+1})$。智能体与环境的每次交互都会被放到经验池中，然后从经验池中随机抽取一批次的数据，对网络进行训练。因此，最终网络的损失函数为：
+
+$$
+\mathcal{L} = \mathbb{E}_{(s_t, a_t, r_{t+1}, s_{t+1}) \in U}[r_{t+1} + \gamma Q^\pi(s_{t+1}, a_{t+1}, \theta^-_e) - Q^\pi(s_t, a_t, \theta_e)]^2
+$$
+
+根据损失函数，选取适当的优化器和学习率，即可对网络进行训练。
+
+\subsubsection{基于DNN的级联时序差分}
+
+上一部分介绍了引入NN拟合智能体获得回报的期望的状态-动作价值函数，现在介绍引入NN拟合智能体获得回报的方差的状态-动作价值函数。设预测智能体获得的回报的方差的网络参数为$\theta_v$，预测的方差为$\bar{Q}^\pi(s_t, a_t, \theta_v)$则根据之前推导的级联时序差分，关于方差的误差为：
+$$
+(r_{t+1} + \gamma Q^\pi(s_{t+1}, a_{t+1}, \theta_e) - Q^\pi(s_t, a_t, \theta_e))^2 + \gamma \bar{Q}^\pi(s_{t+1}, a_{t+1}, \theta_v) - \bar{Q}^\pi(s_t, a_t, \theta_v)
+$$
+
+同理，采用两个相同架构的预测网络和目标网络来对当前和下一状态的方差的状态-动作价值函数进行预测。可推导出网络的损失函数为：
+\begin{align*}
+\mathcal{L} = \mathbb{E}_{(s_t, a_t, r_{t+1}, s_{t+1}) \in U}[&(r_{t+1} + \gamma Q^\pi(s_{t+1}, a_{t+1}, \theta^-_e) - Q^\pi(s_t, a_t, \theta_e))^2 \\
++ &\gamma \bar{Q}^\pi(s_{t+1}, a_{t+1}, \theta_v) - \bar{Q}^\pi(s_t, a_t, \theta_v)]^2
+\end{align*}
+
+根据以上推导的损失函数，即可对网络进行训练。
+
+\subsection{DEC-POMDP}
+这部分讲分布式部分可观测马尔可夫决策过程，主要是各种定义。暂忽略，到时候论文中再写。
+
+\subsection{完全合作式MARL（CTD+VDN）}
+
+在完全合作式MARL中，所有智能体获得的奖励是一致的，即智能体合作完成团队目标时，所有智能体都会获得相同的奖励，也叫做团队奖励。假设有$n$个智能体，则团队的回报的期望的价值函数为：
+
+$Q_{total}((o_1, o_2, \cdots, o_n), (a_1, a_2, \cdots, a_n), (\theta_{e, 1}, \theta_{e, 2}, \cdots, \theta_{e, n}))$。
+
+智能体$i$的价值函数为：$Q_i(o_i, a_i, \theta_{e, i})$。
+
+根据VDN，团队价值函数可以近似分解为各个智能体的价值函数之和，即：
+
+$$
+Q_{total} \approx \sum_{i=1}^{n}Q_i
+$$
+
+同理，团队的回报的方差的价值函数为：
+
+$\bar{Q}_{total}((o_1, o_2, \cdots, o_n), (a_1, a_2, \cdots, a_n), (\theta_{v, 1}, \theta_{v, 2}, \cdots, \theta_{v, n}))$。
+
+智能体$i$的方差价值函数为：$\bar{Q}_i(o_i, a_i, \theta_{e, i})$。
+
+则团队方差价值函数可以近似分解为各个智能体的方差价值函数之和，即：
+
+$$
+\bar{Q}_{total} \approx \sum_{i=1}^{n}\bar{Q}_i
+$$
+
+因此，团队的价值函数可以分解为个体的价值函数之和，把团队奖励看作每个智能体的奖励，就可以对每个智能体进行训练，从而得到每个智能体的最优策略。
+
 	
 \end{document}
