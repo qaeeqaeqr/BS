@@ -1,2 +1,9 @@
 /.idea/
-/venv/
+/.venv/
+
+/models/*
+/outputs/*
+
+/assets/*.aux
+/assets/*.log
+/assets/*.gz

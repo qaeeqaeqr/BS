@@ -1,23 +1,30 @@
 import pettingzoo
 import random
 import numpy as np
-from envs import persuit_env, pong_env, connect4_env
+from pettingzoo.butterfly import cooperative_pong_v5
+import imageio
 
 def pettingzoo_env_test():
-    env = persuit_env()
+    env = cooperative_pong_v5.env(render_mode='human')
     env.reset(seed=42)
+    frames = []
 
     for agent in env.agent_iter():
         observation, reward, termination, truncation, info = env.last()
+        # print(type(observation), observation.shape)
+        frames.append(observation)
 
         if termination or truncation:
             action = None
         else:
             # this is where you would insert your policy
             action = env.action_space(agent).sample()
+        # print(agent, action, reward)
 
         env.step(action)
     env.close()
+
+    imageio.mimsave('./outputs/game_test.mp4', frames)
 
 
 if __name__ == "__main__":
