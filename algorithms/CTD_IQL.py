@@ -74,7 +74,6 @@ def train_ctdiql(env, ctdiql, num_episodes, seed, env_name='default', save_path=
         env.reset(seed=seed)
         episode_reward = 0
 
-        actions = []
         for agent in env.agent_iter():
             agent_idx = int(agent.split('_')[-1])  # 根据环境信息获取agent编号
             total_step += 1
@@ -86,7 +85,6 @@ def train_ctdiql(env, ctdiql, num_episodes, seed, env_name='default', save_path=
                 action = None
             else:
                 action = ctdiql.select_actions(observation, int(agent.split('_')[-1]))
-            actions.append(action)
             episode_reward += reward
 
             # 执行动作

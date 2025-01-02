@@ -13,7 +13,7 @@ class PersuitEnvConfig:
     urgency_reward = -0.1
     surround = True
     constraint_window = 1.0
-    render_mode = None
+    render_mode = 'rgb_array'
 
     n_actions = 5  # 上下左右或静止不动
 
@@ -27,9 +27,9 @@ class PongEnvConfig:
     bounce_randomness = False
     max_reward = 100
     off_screen_penalty = -10
-    render_mode = None
+    render_mode = 'rgb_array'
 
-    n_actions = 2  # 往上或往下
+    n_actions = 3  # 往上或往下或静止
 
 
 class Connect4EnvConfig:

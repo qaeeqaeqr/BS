@@ -49,7 +49,5 @@ pettingzoo的atari环境均不可用。
 
 ### todo
 
-完成ctd-iql算法的编写。
-
-完成ctd-iql算法训练、可视化的编写。
+完成ctd-vdn算法的编写。
 

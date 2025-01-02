@@ -5,6 +5,8 @@ from pettingzoo.classic import connect_four_v3
 from configs import alg_config, env_config
 
 from algorithms.IQL import visualize_iql, IQL
+from algorithms.CTD_IQL import visualize_ctdiql, CTDIQL
+from algorithms.VDN import visualize_vdn, VDNAgent
 
 pursuit = env_config.PersuitEnvConfig()
 pong = env_config.PongEnvConfig()
@@ -95,7 +97,7 @@ def visualize_IQL_on_pong():
     )
 
     testing_iql = IQL(num_agents=2,
-                      state_dim=280*480*3,
+                      state_dim=280 * 480 * 3,
                       action_dim=pong.n_actions,
                       buffer_size=alg_config.buffer_size,
                       lr=alg_config.lr,
@@ -112,5 +114,79 @@ def visualize_IQL_on_pong():
                   load_path=alg_config.IQL_pong_model_path,
                   video_path=alg_config.output_dir)
 
+
+def visualize_CTDIQL_on_pursuit():
+    testing_env = pursuit_v4.env(
+        max_cycles=pursuit.max_cycles,
+        x_size=pursuit.x_size,
+        y_size=pursuit.y_size,
+        shared_reward=pursuit.shared_reward,
+        n_evaders=pursuit.n_evaders,
+        n_pursuers=pursuit.n_pursuers,
+        obs_range=pursuit.obs_range,
+        n_catch=pursuit.n_catch,
+        freeze_evaders=pursuit.freeze_evaders,
+        tag_reward=pursuit.tag_reward,
+        catch_reward=pursuit.catch_reward,
+        urgency_reward=pursuit.urgency_reward,
+        surround=pursuit.surround,
+        constraint_window=pursuit.constraint_window,
+        render_mode='rgb_array',
+    )
+    testing_ctdiql = CTDIQL(num_agents=pursuit.n_pursuers,
+                            state_dim=(pursuit.obs_range ** 2) * 3,
+                            action_dim=pursuit.n_actions,
+                            buffer_size=alg_config.buffer_size,
+                            lr=alg_config.lr,
+                            gamma=alg_config.gamma,
+                            epsilon=0,  # 测试时，算法应该完全按照学习的策略选择动作。
+                            epsilon_decay=alg_config.epsilon_decay,
+                            epsilon_min=alg_config.epsilon_min,
+                            batch_size=alg_config.batch_size,
+                            device=alg_config.device,
+                            zeta=alg_config.zeta,
+                            lr_var=alg_config.lr_var, )
+    visualize_ctdiql(testing_env, testing_ctdiql,
+                     seed=alg_config.test_seed,
+                     env_name='visualize IQL in pursuit',
+                     load_path=alg_config.IQL_persuit_model_path,
+                     video_path=alg_config.output_dir)
+
+def visualize_VDN_on_pursuit():
+    testing_env = pursuit_v4.env(
+        max_cycles=pursuit.max_cycles,
+        x_size=pursuit.x_size,
+        y_size=pursuit.y_size,
+        shared_reward=pursuit.shared_reward,
+        n_evaders=pursuit.n_evaders,
+        n_pursuers=pursuit.n_pursuers,
+        obs_range=pursuit.obs_range,
+        n_catch=pursuit.n_catch,
+        freeze_evaders=pursuit.freeze_evaders,
+        tag_reward=pursuit.tag_reward,
+        catch_reward=pursuit.catch_reward,
+        urgency_reward=pursuit.urgency_reward,
+        surround=pursuit.surround,
+        constraint_window=pursuit.constraint_window,
+        render_mode='rgb_array',
+    )
+    testing_vdn = VDNAgent(num_agents=pursuit.n_pursuers,
+                            state_dim=(pursuit.obs_range ** 2) * 3,
+                            action_dim=pursuit.n_actions,
+                            buffer_size=alg_config.buffer_size,
+                            lr=alg_config.lr,
+                            gamma=alg_config.gamma,
+                            epsilon=0,  # 测试时，算法应该完全按照学习的策略选择动作。
+                            epsilon_decay=alg_config.epsilon_decay,
+                            epsilon_min=alg_config.epsilon_min,
+                            batch_size=alg_config.batch_size,
+                            device=alg_config.device,)
+
+    visualize_vdn(testing_env, testing_vdn,
+                  seed=alg_config.test_seed,
+                  env_name='visualize IQL in pursuit',
+                  load_path=alg_config.VDN_persuit_model_path,
+                  video_path=alg_config.output_dir)
+
 if __name__ == '__main__':
-    visualize_IQL_on_pong()
+    visualize_VDN_on_pursuit()

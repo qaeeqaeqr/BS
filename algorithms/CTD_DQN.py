@@ -121,17 +121,17 @@ class CTDDQNAgent:
         current_q_var = self.policy_net_var(states).gather(1, actions)
         target_q_var = (1 - dones) * self.gamma * self.target_net_var(next_states).max(1, keepdim=True)[0]
 
-        # mean网络loss
+        # loss及bp
         loss_mean = self.criterion(current_q_mean, target_q_mean_reward)
-        self.optimizer_mean.zero_grad()
-        loss_mean.backward()
-        self.optimizer_mean.step()
-
-        # var网络loss
         loss_var = self.criterion(current_q_var, (target_q_mean_reward - current_q_mean)**2 + target_q_var)
+        loss_total = loss_mean + loss_var  # 由于pytorch只保存一个计算图，所以把两个loss加起来，只做一次bp
+        self.optimizer_mean.zero_grad()
         self.optimizer_var.zero_grad()
-        loss_var.backward()
+        loss_total.backward()
+        self.optimizer_mean.step()
         self.optimizer_var.step()
+
+        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
     def update_target_network(self):
         self.target_net_mean.load_state_dict(self.policy_net_mean.state_dict())

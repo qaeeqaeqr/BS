@@ -1,29 +1,62 @@
-"""
-Independent Q-Learning
-"""
 import os
 import imageio
+import random
 
 import torch
-from .DQN import DQNAgent
+from .DQN import DQNAgent4VDN
 
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
+import torch.nn as nn
 
-class IQL:
+
+class VDNNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, q_values:list[torch.Tensor]):
+        return torch.stack(q_values, dim=0).sum(dim=0)
+
+class VDNAgent:
+    """
+    这里VDN与IQL不同，IQL可以逐个智能体行动并更新，VDN只能所有智能体一起行动一轮并同时更新。
+    """
     def __init__(self, num_agents, state_dim, action_dim, buffer_size=10000, lr=1e-3, gamma=0.99,
                  epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.1, batch_size=64, device='cpu'):
         self.num_agents = num_agents
         self.batch_size = batch_size
         self.device = device
-        self.agents = [DQNAgent(state_dim, action_dim, buffer_size, lr, gamma, epsilon, epsilon_decay,
+        self.agents = [DQNAgent4VDN(state_dim, action_dim, buffer_size, lr, gamma, epsilon, epsilon_decay,
                                 epsilon_min, batch_size, device) for _ in range(num_agents)]
+        self.vdn_net = VDNNet()  # 无网络，用torch加和保证梯度
+
+        self.criterion = nn.MSELoss()
 
     def select_actions(self, observation, agent_idx):
         return self.agents[agent_idx].select_action(observation)
 
-    def update(self, agent_idx):
-        self.agents[agent_idx].update()
+    def update(self):
+        # 所有agent一起update
+        sample_random_seed = random.randint(0, 10000)
+        if len(self.agents[0].replay_buffer) < self.batch_size:
+            return
+
+        current_q_s, target_q_s = [], []
+        for agent in self.agents:
+            current_q, target_q = agent.calculate_q(sample_random_seed=sample_random_seed)
+            current_q_s.append(current_q)
+            target_q_s.append(target_q)
+
+        current_q_total = self.vdn_net(current_q_s)
+        target_q_total = self.vdn_net(target_q_s)
+
+        loss = self.criterion(current_q_total, target_q_total)
+        for agent in self.agents:
+            agent.opt_zero_grad()
+        loss.backward()
+        for agent in self.agents:
+            agent.opt_step()
 
     def update_target_networks(self):
         for agent in self.agents:
@@ -48,60 +81,76 @@ class IQL:
             agent.policy_net.load_state_dict(model_state_dict[f'agent_{i}'])
 
 
-def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, load_path=None, fig_path=None):
+def train_vdn(env, vdn, num_episodes, num_agents, seed, env_name='default', save_path=None, load_path=None, fig_path=None):
     if load_path:
         print('loading trained model..\n')
-        iql.load_model(load_path)
+        vdn.load_model(load_path)
     else:
         print('training from scratch\n')
 
     total_step = 0
     episode_rewards = []
+
     for episode in range(num_episodes):
         env.reset(seed=seed)
         episode_reward = 0
+        update_counter = 0
+
+        # 把所有智能体的一次交互存储，一起更新
+        agent_idxes = []
+        observations = []
+        actions = []
+        next_rewards = []
+        next_observations = []
+        terminations = []
 
         for agent in env.agent_iter():
-            agent_idx = int(agent.split('_')[-1])  # 根据环境信息获取agent编号
+            update_counter += 1
             total_step += 1
-            observation, reward, termination, truncation, info = env.last()
-            observation = observation.flatten()  # 将图像或二位数据都转成一维
 
-            # 选择动作
+            # 获取当前agent和观测
+            agent_idx = int(agent.split('_')[-1])
+            observation, reward, termination, truncation, info = env.last()
+            observation = observation.flatten()
+
+            # 选择动作并执行
             if termination or truncation:
                 action = None
             else:
-                action = iql.select_actions(observation, agent_idx)
-            episode_reward += reward
-            # print(agent, action)
-
-            # 执行动作
+                action = vdn.select_actions(observation, agent_idx)
             env.step(action)
 
-            # 将经验添加到replay buffer中
+            episode_reward += reward
+
+            # 添加经验
             next_observation, next_reward, termination, truncation, info = env.last()
             next_observation = next_observation.flatten()
-            iql.add_experience(agent_idx,
-                               observation, action, next_reward, next_observation, termination)
+            agent_idxes.append(agent_idx)
+            observations.append(observation)
+            actions.append(action)
+            next_rewards.append(next_reward)
+            next_observations.append(next_observation)
+            terminations.append(termination)
 
-            # 从经验池采样训练智能体
-            iql.update(agent_idx)
+            if update_counter % num_agents == 0:  # 所有agent都执行完一次操作，集中更新经验池和训练
+                for i, agent_idx in enumerate(agent_idxes):
+                    vdn.add_experience(agent_idx, observations[i], actions[i],
+                                       next_rewards[i], next_observations[i], terminations[i])
 
-            # 每100步更新一次目标网络
-            if total_step % 100 == 0:
-                iql.update_target_networks()
-                total_step = 0
+                vdn.update()
+                if total_step % 100 == 0:
+                    vdn.update_target_networks()
+                    total_step = 0
 
-            # 检查是否达到终止条件
             if termination or truncation:
                 break
 
-        print(f'Episode: {episode+1}/{num_episodes}, Reward: {episode_reward}')
+        print(f'Episode: {episode + 1}/{num_episodes}, Reward: {episode_reward}')
         episode_rewards.append(episode_reward)
 
     # 保存训练好的模型
     if save_path:
-        iql.save_model(save_path)
+        vdn.save_model(save_path)
         print('model saved at', save_path)
 
     # 画reward变化的折线图
@@ -117,8 +166,7 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
     env.close()
     return episode_rewards
 
-
-def visualize_iql(env, iql, seed, env_name='default', load_path=None, video_path=None):
+def visualize_vdn(env, vdn, seed, env_name='default', load_path=None, video_path=None):
     if video_path is None:
         raise FileNotFoundError('video_path cannot be None')
 
@@ -126,7 +174,7 @@ def visualize_iql(env, iql, seed, env_name='default', load_path=None, video_path
         print('warning: no trained model, exhibiting random case.\n')
     else:
         print(f'loading trained model from {load_path}\n')
-        iql.load_model(load_path)
+        vdn.load_model(load_path)
 
     frames = []
     env.reset(seed=seed)
@@ -145,14 +193,11 @@ def visualize_iql(env, iql, seed, env_name='default', load_path=None, video_path
         if termination or truncation:
             action = None
         else:
-            action = iql.select_actions(observation.flatten(), int(agent.split('_')[-1]))
+            action = vdn.select_actions(observation.flatten(), int(agent.split('_')[-1]))
 
         env.step(action)
     env.close()
 
     imageio.mimsave(os.path.join(video_path, env_name + '.mp4'), frames)
     print('game video saved at', os.path.join(video_path, env_name + '.mp4'))
-
-
-
 
