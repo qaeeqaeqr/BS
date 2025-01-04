@@ -20,10 +20,8 @@ pettingzoo的atari环境均不可用。
 计划使用pettingzoo的以下环境：
 
 * from pettingzoo.sisl import pursuit_v4
-* from pettingzoo.butterfly import cooperative_pong_v5
-* from pettingzoo.classic import connect_four_v3
 
-这些环境详见pettingzoo官方文档
+环境详见pettingzoo官方文档
 [pettingzoo](https://pettingzoo.farama.org/)。
 
 ### Project
@@ -49,5 +47,7 @@ pettingzoo的atari环境均不可用。
 
 ### todo
 
-完成ctd-vdn算法的编写。
+1、本机算力不足
+
+2、目前只考虑了pursuit的环境
 
