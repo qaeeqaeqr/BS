@@ -41,6 +41,14 @@ class CTDIQL:
         for agent in self.agents:
             agent.update_target_network()
 
+    def update_epsilon(self):
+        for agent in self.agents:
+            agent.epsilon_update()
+
+    def lr_step(self):
+        for agent in self.agents:
+            agent.lr_step()
+
     def add_experience(self, agent_index, observation, action, reward, next_state, done):
         # 将经验添加到对应智能体的replay buffer中
         self.agents[agent_index].replay_buffer.add(observation, action, reward, next_state, done)
@@ -108,6 +116,9 @@ def train_ctdiql(env, ctdiql, num_episodes, seed, env_name='default', save_path=
             if termination or truncation:
                 break
 
+        ctdiql.lr_step()
+        ctdiql.update_epsilon()
+
         print(f'Episode: {episode + 1}/{num_episodes}, Reward: {episode_reward}')
         episode_rewards.append(episode_reward)
 
@@ -119,7 +130,7 @@ def train_ctdiql(env, ctdiql, num_episodes, seed, env_name='default', save_path=
     # 画reward变化的折线图
     if fig_path:
         plt.figure(figsize=(10, 6))
-        plt.plot(episode_rewards, marker='o')
+        plt.plot(episode_rewards)
         plt.title('Rewards in: ' + env_name)
         plt.xlabel('episode')
         plt.ylabel('reward')

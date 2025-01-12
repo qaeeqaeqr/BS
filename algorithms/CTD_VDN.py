@@ -1,4 +1,6 @@
 import os
+import time
+
 import imageio
 import random
 
@@ -65,6 +67,14 @@ class CTDVDNAgent:
         for agent in self.agents:
             agent.update_target_network()
 
+    def update_epsilon(self):
+        for agent in self.agents:
+            agent.epsilon_update()
+
+    def lr_step(self):
+        for agent in self.agents:
+            agent.lr_step()
+
     def add_experience(self, agent_index, observation, action, reward, next_state, done):
         # 将经验添加到对应智能体的replay buffer中
         self.agents[agent_index].replay_buffer.add(observation, action, reward, next_state, done)
@@ -96,6 +106,7 @@ def train_ctdvdn(env, ctdvdn, num_episodes, num_agents, seed, env_name='default'
     episode_rewards = []
 
     for episode in range(num_episodes):
+        episode_start_time = time.time()
         env.reset(seed=seed)
         episode_reward = 0
         update_counter = 0
@@ -149,7 +160,11 @@ def train_ctdvdn(env, ctdvdn, num_episodes, num_agents, seed, env_name='default'
             if termination or truncation:
                 break
 
-        print(f'Episode: {episode + 1}/{num_episodes}, Reward: {episode_reward}')
+        ctdvdn.lr_step()
+        ctdvdn.update_epsilon()
+
+        episode_end_time = time.time()
+        print(f'Episode: {episode + 1}/{num_episodes}, Reward: {episode_reward}, Time cost: {round(episode_end_time - episode_start_time, 3)}')
         episode_rewards.append(episode_reward)
 
     # 保存训练好的模型
@@ -160,7 +175,7 @@ def train_ctdvdn(env, ctdvdn, num_episodes, num_agents, seed, env_name='default'
     # 画reward变化的折线图
     if fig_path:
         plt.figure(figsize=(10, 6))
-        plt.plot(episode_rewards, marker='o')
+        plt.plot(episode_rewards)
         plt.title('Rewards in: ' + env_name)
         plt.xlabel('episode')
         plt.ylabel('reward')

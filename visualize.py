@@ -94,7 +94,7 @@ def visualize_IQL_on_pong():
         bounce_randomness=pong.bounce_randomness,
         max_reward=pong.max_reward,
         off_screen_penalty=pong.off_screen_penalty,
-        render_mode=pong.render_mode,
+        render_mode='human',
     )
 
     testing_iql = IQL(num_agents=2,
@@ -228,4 +228,4 @@ def visualize_CTDVDN_on_pursuit():
                      video_path=alg_config.output_dir)
 
 if __name__ == '__main__':
-    visualize_CTDVDN_on_pursuit()
+    visualize_IQL_on_pong()

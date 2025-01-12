@@ -9,6 +9,7 @@ from collections import deque
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.optim.lr_scheduler as lr_scheduler
 
 class QNetMean(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -67,6 +68,7 @@ class DQNAgent:
         self.target_net.eval()
 
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
+        self.lr_scheduler = lr_scheduler.ExponentialLR(self.optimizer, gamma=0.9999)
         self.criterion = nn.MSELoss()
 
         self.replay_buffer = ReplayBuffer(buffer_size=buffer_size)
@@ -97,6 +99,7 @@ class DQNAgent:
         dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)
 
         # 计算 Q 值
+        print(states)
         current_q = self.policy_net(states).gather(1, actions)
         target_q = rewards + (1 - dones) * self.gamma * self.target_net(next_states).max(1, keepdim=True)[0]
 
@@ -106,10 +109,14 @@ class DQNAgent:
         loss.backward()
         self.optimizer.step()
 
+    def epsilon_update(self):
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
     def update_target_network(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
+
+    def lr_step(self):
+        self.lr_scheduler.step()
 
 
 class DQNAgent4VDN:
@@ -132,6 +139,7 @@ class DQNAgent4VDN:
         self.target_net.eval()
 
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
+        self.lr_scheduler = lr_scheduler.ExponentialLR(self.optimizer, gamma=0.9995, last_epoch=-1)
         self.criterion = nn.MSELoss()
 
         self.replay_buffer = ReplayBuffer(buffer_size=buffer_size)
@@ -184,6 +192,12 @@ class DQNAgent4VDN:
 
     def opt_step(self):
         self.optimizer.step()
+
+    def epsilon_update(self):
+        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+
+    def lr_step(self):
+        self.lr_scheduler.step()
 
     def update_target_network(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())

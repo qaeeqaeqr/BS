@@ -9,13 +9,19 @@
 ### Environment
 
 ##### 1 Code environment
-python=3.9，
-依赖库见[requirements.txt](requirements.txt)。
+
+在linux环境下，令当前工作目录为本项目根文件夹，顺序运行以下指令即可：
+````
+conda create -n ctd-marl python=3.9
+conda activate ctd-marl
+pip install -r requirements.txt
+pip install torch==2.1.2 torchaudio==2.1.2 torchvision==0.16.2 -f https://mirrors.aliyun.com/pytorch-wheels/cu121
+````
+
+##### 2 MARL environment
 
 注意，在windows下，由于multi-agent-ale-py包的限制，
 pettingzoo的atari环境均不可用。
-
-##### 2 MARL environment
 
 计划使用pettingzoo的以下环境：
 
@@ -47,7 +53,10 @@ pettingzoo的atari环境均不可用。
 
 ### todo
 
-1、本机算力不足
+0、加入learning rate decay
 
-2、目前只考虑了pursuit的环境
+1、本机算力不足。预计用[服务器](https://www.funhpc.com/)训练
+
+2、目前只考虑了pursuit的环境，而pursuit环境似乎过于复杂，
+目前模型学习不到好的策略，故需要考虑简单的环境。
 

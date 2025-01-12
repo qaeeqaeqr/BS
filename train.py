@@ -97,11 +97,12 @@ def train_IQL_on_pong():
         bounce_randomness=pong.bounce_randomness,
         max_reward=pong.max_reward,
         off_screen_penalty=pong.off_screen_penalty,
-        render_mode=pong.render_mode,
+        render_mode='human',  # pong环境有bug。其它的render_mode会导致observation啥也没有。
+        render_fps=60,
     )
 
     training_iql = IQL(num_agents=2,
-                       state_dim=280 * 480 * 3,
+                       state_dim=15,  # 提取的特征
                        action_dim=pong.n_actions,
                        buffer_size=alg_config.buffer_size,
                        lr=alg_config.lr,
@@ -116,7 +117,9 @@ def train_IQL_on_pong():
               num_episodes=alg_config.num_episodes,
               seed=alg_config.train_seed,
               env_name='train IQL in Pong',
-              save_path=alg_config.IQL_pong_model_path, )
+              save_path=alg_config.IQL_pong_model_path,
+              load_path=None,
+              fig_path=alg_config.output_dir)
 
 
 def train_IQL_on_connect4():
@@ -259,5 +262,7 @@ def train_CTDVDN_on_pursuit():
               load_path=None,
               fig_path=alg_config.output_dir)
 
+
+
 if __name__ == "__main__":
-    train_CTDVDN_on_pursuit()
+    train_IQL_on_pong()

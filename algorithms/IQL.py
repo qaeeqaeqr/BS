@@ -2,13 +2,16 @@
 Independent Q-Learning
 """
 import os
+import time
 import imageio
 
 import torch
 from .DQN import DQNAgent
+from .env_preprocess import *
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 
 class IQL:
     def __init__(self, num_agents, state_dim, action_dim, buffer_size=10000, lr=1e-3, gamma=0.99,
@@ -28,6 +31,14 @@ class IQL:
     def update_target_networks(self):
         for agent in self.agents:
             agent.update_target_network()
+
+    def update_epsilon(self):
+        for agent in self.agents:
+            agent.epsilon_update()
+
+    def lr_step(self):
+        for agent in self.agents:
+            agent.lr_step()
 
     def add_experience(self, agent_index, observation, action, reward, next_state, done):
         # 将经验添加到对应智能体的replay buffer中
@@ -58,6 +69,7 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
     total_step = 0
     episode_rewards = []
     for episode in range(num_episodes):
+        episode_start_time = time.time()
         env.reset(seed=seed)
         episode_reward = 0
 
@@ -65,7 +77,12 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
             agent_idx = int(agent.split('_')[-1])  # 根据环境信息获取agent编号
             total_step += 1
             observation, reward, termination, truncation, info = env.last()
-            observation = observation.flatten()  # 将图像或二位数据都转成一维
+            # 一些环境中，可以对observation进行预处理。
+            if 'pong' in env_name.lower():
+                observation = pong_obs_preprocess(observation)
+            if 'pursuit' in env_name.lower():
+                observation = pursuit_obs_preprocess(observation)
+            observation = observation.flatten()  # 将图像或二维数据都转成一维
 
             # 选择动作
             if termination or truncation:
@@ -80,6 +97,10 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
 
             # 将经验添加到replay buffer中
             next_observation, next_reward, termination, truncation, info = env.last()
+            if 'pong' in env_name.lower():
+                next_observation = pong_obs_preprocess(next_observation)
+            if 'pursuit' in env_name.lower():
+                next_observation = pursuit_obs_preprocess(next_observation)
             next_observation = next_observation.flatten()
             iql.add_experience(agent_idx,
                                observation, action, next_reward, next_observation, termination)
@@ -96,7 +117,13 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
             if termination or truncation:
                 break
 
-        print(f'Episode: {episode+1}/{num_episodes}, Reward: {episode_reward}')
+        # 每个episode后更新学习率和epsilon
+        iql.lr_step()
+        iql.update_epsilon()
+
+        episode_end_time = time.time()
+        print(f'Episode: {episode+1}/{num_episodes}, Reward: {episode_reward}, LR: {iql.agents[0].lr_scheduler.get_last_lr()},'
+              f'Time: {round(episode_end_time - episode_start_time, 4)}s')
         episode_rewards.append(episode_reward)
 
     # 保存训练好的模型
@@ -107,7 +134,7 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
     # 画reward变化的折线图
     if fig_path:
         plt.figure(figsize=(10, 6))
-        plt.plot(episode_rewards, marker='o')
+        plt.plot(episode_rewards)
         plt.title('Rewards in: ' + env_name)
         plt.xlabel('episode')
         plt.ylabel('reward')
@@ -133,10 +160,15 @@ def visualize_iql(env, iql, seed, env_name='default', load_path=None, video_path
 
     for agent in env.agent_iter():
         observation, reward, termination, truncation, info = env.last()
+        if 'pong' in env_name.lower():
+            observation = pong_obs_preprocess(observation)
+        if 'pursuit' in env_name.lower():
+            observation = pursuit_obs_preprocess(observation)
+
         if 'pursuit' in env_name:
             frames.append(env.env.render())  # 对于pursuit的源码，这样调用可以获得全局观测。
         elif 'pong' in env_name:
-            frames.append(observation)   # fixme 这里展示的视频全是纯黑图片。
+            frames.append(observation)
         elif 'connect' in env_name:
             frames.append(env.state())   # connect4
         else:

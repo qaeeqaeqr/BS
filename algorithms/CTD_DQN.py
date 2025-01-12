@@ -5,6 +5,7 @@ from collections import deque
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.optim.lr_scheduler as lr_scheduler
 
 class QNetMean(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -85,6 +86,9 @@ class CTDDQNAgent:
         self.target_net_var.eval()
         self.optimizer_var = optim.Adam(self.policy_net_var.parameters(), lr=lr_var)
 
+        self.lr_scheduler_mean = lr_scheduler.ExponentialLR(self.optimizer_mean, gamma=0.9995, last_epoch=-1)
+        self.lr_scheduler_var = lr_scheduler.ExponentialLR(self.optimizer_var, gamma=0.9995, last_epoch=-1)
+
         self.criterion = nn.MSELoss()
 
         self.replay_buffer = ReplayBuffer(buffer_size=buffer_size)
@@ -131,11 +135,16 @@ class CTDDQNAgent:
         self.optimizer_mean.step()
         self.optimizer_var.step()
 
+    def epsilon_update(self):
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
     def update_target_network(self):
         self.target_net_mean.load_state_dict(self.policy_net_mean.state_dict())
         self.target_net_var.load_state_dict(self.policy_net_var.state_dict())
+
+    def lr_step(self):
+        self.lr_scheduler_mean.step()
+        self.lr_scheduler_var.step()
 
 
 class CTDDQNAgent4VDN:
@@ -164,6 +173,9 @@ class CTDDQNAgent4VDN:
         self.target_net_var.load_state_dict(self.policy_net_var.state_dict())
         self.target_net_var.eval()
         self.optimizer_var = optim.Adam(self.policy_net_var.parameters(), lr=lr_var)
+
+        self.lr_scheduler_mean = lr_scheduler.ExponentialLR(self.optimizer_mean, gamma=0.9995, last_epoch=-1)
+        self.lr_scheduler_var = lr_scheduler.ExponentialLR(self.optimizer_var, gamma=0.9995, last_epoch=-1)
 
         self.criterion = nn.MSELoss()
 
@@ -226,6 +238,13 @@ class CTDDQNAgent4VDN:
     def opt_step(self):
         self.optimizer_mean.step()
         self.optimizer_var.step()
+
+    def epsilon_update(self):
+        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+
+    def lr_step(self):
+        self.lr_scheduler_mean.step()
+        self.lr_scheduler_var.step()
 
     def update_target_network(self):
         self.target_net_mean.load_state_dict(self.policy_net_mean.state_dict())
