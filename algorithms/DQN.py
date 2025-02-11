@@ -19,7 +19,7 @@ class QNetMean(nn.Module):
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, output_dim)
+            nn.Linear(128, output_dim),
         )
 
     def forward(self, x):
@@ -81,6 +81,7 @@ class DQNAgent:
             state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
             with torch.no_grad():
                 q_values = self.policy_net(state)
+                print(q_values)
             return torch.argmax(q_values).item()
 
     def update(self):
@@ -99,7 +100,6 @@ class DQNAgent:
         dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)
 
         # 计算 Q 值
-        print(states)
         current_q = self.policy_net(states).gather(1, actions)
         target_q = rewards + (1 - dones) * self.gamma * self.target_net(next_states).max(1, keepdim=True)[0]
 
@@ -116,7 +116,8 @@ class DQNAgent:
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
     def lr_step(self):
-        self.lr_scheduler.step()
+        # self.lr_scheduler.step()
+        pass
 
 
 class DQNAgent4VDN:
@@ -197,7 +198,8 @@ class DQNAgent4VDN:
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
     def lr_step(self):
-        self.lr_scheduler.step()
+        # self.lr_scheduler.step()
+        pass
 
     def update_target_network(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())

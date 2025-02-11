@@ -22,7 +22,7 @@ class PongEnvConfig:
     ball_speed = 9
     left_paddle_speed = 12
     right_paddle_speed = 12
-    cake_paddle = True
+    cake_paddle = False
     max_cycles = 900
     bounce_randomness = False
     max_reward = 100

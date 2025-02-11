@@ -9,6 +9,8 @@ from algorithms.CTD_IQL import train_ctdiql, CTDIQL
 from algorithms.VDN import train_vdn, VDNAgent
 from algorithms.CTD_VDN import train_ctdvdn, CTDVDNAgent
 
+from utils import *
+
 pursuit = env_config.PersuitEnvConfig()
 pong = env_config.PongEnvConfig()
 connect4 = env_config.Connect4EnvConfig()
@@ -98,11 +100,11 @@ def train_IQL_on_pong():
         max_reward=pong.max_reward,
         off_screen_penalty=pong.off_screen_penalty,
         render_mode='human',  # pong环境有bug。其它的render_mode会导致observation啥也没有。
-        render_fps=60,
+        render_fps=100,
     )
 
     training_iql = IQL(num_agents=2,
-                       state_dim=15,  # 提取的特征
+                       state_dim=14*24,  # 提取的特征
                        action_dim=pong.n_actions,
                        buffer_size=alg_config.buffer_size,
                        lr=alg_config.lr,
@@ -113,14 +115,15 @@ def train_IQL_on_pong():
                        batch_size=alg_config.batch_size,
                        device=alg_config.device, )
 
-    train_iql(training_env, training_iql,
-              num_episodes=alg_config.num_episodes,
-              seed=alg_config.train_seed,
-              env_name='train IQL in Pong',
-              save_path=alg_config.IQL_pong_model_path,
-              load_path=None,
-              fig_path=alg_config.output_dir)
+    rewards = train_iql(training_env, training_iql,
+                        num_episodes=alg_config.num_episodes,
+                        seed=alg_config.train_seed,
+                        env_name='train IQL in Pong',
+                        save_path=alg_config.IQL_pong_model_path,
+                        load_path=None,
+                        fig_path=alg_config.output_dir)
 
+    save_list(rewards, './outputs/IQL_pong1.pkl')
 
 def train_IQL_on_connect4():
     training_env = connect_four_v3.env(
@@ -221,6 +224,7 @@ def train_VDN_on_pursuit():
               load_path=None,
               fig_path=alg_config.output_dir)
 
+
 def train_CTDVDN_on_pursuit():
     training_env = pursuit_v4.env(
         max_cycles=pursuit.max_cycles,
@@ -240,28 +244,27 @@ def train_CTDVDN_on_pursuit():
         render_mode=pursuit.render_mode,
     )
     training_ctdvdn = CTDVDNAgent(num_agents=pursuit.n_pursuers,
-                            state_dim=(pursuit.obs_range ** 2) * 3,
-                            action_dim=pursuit.n_actions,
-                            buffer_size=alg_config.buffer_size,
-                            lr=alg_config.lr,
-                            gamma=alg_config.gamma,
-                            epsilon=alg_config.epsilon,
-                            epsilon_decay=alg_config.epsilon_decay,
-                            epsilon_min=alg_config.epsilon_min,
-                            batch_size=alg_config.batch_size,
-                            device=alg_config.device,
-                            zeta=alg_config.zeta,
-                            lr_var=alg_config.lr_var, )
+                                  state_dim=(pursuit.obs_range ** 2) * 3,
+                                  action_dim=pursuit.n_actions,
+                                  buffer_size=alg_config.buffer_size,
+                                  lr=alg_config.lr,
+                                  gamma=alg_config.gamma,
+                                  epsilon=alg_config.epsilon,
+                                  epsilon_decay=alg_config.epsilon_decay,
+                                  epsilon_min=alg_config.epsilon_min,
+                                  batch_size=alg_config.batch_size,
+                                  device=alg_config.device,
+                                  zeta=alg_config.zeta,
+                                  lr_var=alg_config.lr_var, )
 
     train_ctdvdn(training_env, training_ctdvdn,
-              num_episodes=alg_config.num_episodes,
-              num_agents=pursuit.n_pursuers,
-              seed=alg_config.train_seed,
-              env_name='train CTD_VDN in pursuit',
-              save_path=alg_config.CTDVDN_persuit_model_path,
-              load_path=None,
-              fig_path=alg_config.output_dir)
-
+                 num_episodes=alg_config.num_episodes,
+                 num_agents=pursuit.n_pursuers,
+                 seed=alg_config.train_seed,
+                 env_name='train CTD_VDN in pursuit',
+                 save_path=alg_config.CTDVDN_persuit_model_path,
+                 load_path=None,
+                 fig_path=alg_config.output_dir)
 
 
 if __name__ == "__main__":

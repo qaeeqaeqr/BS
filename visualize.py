@@ -95,10 +95,11 @@ def visualize_IQL_on_pong():
         max_reward=pong.max_reward,
         off_screen_penalty=pong.off_screen_penalty,
         render_mode='human',
+        render_fps=25,
     )
 
     testing_iql = IQL(num_agents=2,
-                      state_dim=280 * 480 * 3,
+                      state_dim=14*24,
                       action_dim=pong.n_actions,
                       buffer_size=alg_config.buffer_size,
                       lr=alg_config.lr,

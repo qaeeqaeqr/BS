@@ -49,14 +49,25 @@ pettingzoo的atari环境均不可用。
 
 [visualize.py](./visualize.py)完成算法可视化。
 
+### Basic Usage
 
+训练模型可选取[train.py](./train.py)的函数，并运行
+
+``nohup python -u train.py >> xx.log 2>&1 &``
+
+即可开始后台训练。
+
+对训练好的模型进行可视化可选取[visualize.py](./visualize.py)的函数，并运行
+
+``python visualize.py``
+
+即可将可视化结果保存下来。
 
 ### todo
 
-0、加入learning rate decay
+funhpc服务器：ssh -p 46480 root@ykvvhm6pxtisq8ajsnow.deepln.com
+密码：X703IOrLrm3VyTGq3kpy0DdLjYuoeMdg
 
-1、本机算力不足。预计用[服务器](https://www.funhpc.com/)训练
 
-2、目前只考虑了pursuit的环境，而pursuit环境似乎过于复杂，
-目前模型学习不到好的策略，故需要考虑简单的环境。
+2、阴影折线图展示算法鲁棒性。
 

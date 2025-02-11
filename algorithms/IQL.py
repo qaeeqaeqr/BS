@@ -4,6 +4,7 @@ Independent Q-Learning
 import os
 import time
 import imageio
+import random
 
 import torch
 from .DQN import DQNAgent
@@ -70,7 +71,7 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
     episode_rewards = []
     for episode in range(num_episodes):
         episode_start_time = time.time()
-        env.reset(seed=seed)
+        env.reset(seed=random.randint(0, 10000))  # env.reset(seed=seed)
         episode_reward = 0
 
         for agent in env.agent_iter():
@@ -123,7 +124,7 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
 
         episode_end_time = time.time()
         print(f'Episode: {episode+1}/{num_episodes}, Reward: {episode_reward}, LR: {iql.agents[0].lr_scheduler.get_last_lr()},'
-              f'Time: {round(episode_end_time - episode_start_time, 4)}s')
+              f'Time: {round(episode_end_time - episode_start_time, 4)}s, Epsilon: {round(iql.agents[0].epsilon, 4)}')
         episode_rewards.append(episode_reward)
 
     # 保存训练好的模型
@@ -160,6 +161,7 @@ def visualize_iql(env, iql, seed, env_name='default', load_path=None, video_path
 
     for agent in env.agent_iter():
         observation, reward, termination, truncation, info = env.last()
+        origin_observation = observation
         if 'pong' in env_name.lower():
             observation = pong_obs_preprocess(observation)
         if 'pursuit' in env_name.lower():
@@ -168,7 +170,7 @@ def visualize_iql(env, iql, seed, env_name='default', load_path=None, video_path
         if 'pursuit' in env_name:
             frames.append(env.env.render())  # 对于pursuit的源码，这样调用可以获得全局观测。
         elif 'pong' in env_name:
-            frames.append(observation)
+            frames.append(origin_observation)
         elif 'connect' in env_name:
             frames.append(env.state())   # connect4
         else:

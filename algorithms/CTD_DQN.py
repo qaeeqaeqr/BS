@@ -15,7 +15,8 @@ class QNetMean(nn.Module):
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, output_dim)
+            nn.Linear(128, output_dim),
+            nn.Softmax()
         )
 
     def forward(self, x):
@@ -30,7 +31,8 @@ class QNetVar(nn.Module):
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, output_dim)
+            nn.Linear(128, output_dim),
+            nn.Softmax()
         )
 
     def forward(self, x):
@@ -143,9 +145,9 @@ class CTDDQNAgent:
         self.target_net_var.load_state_dict(self.policy_net_var.state_dict())
 
     def lr_step(self):
-        self.lr_scheduler_mean.step()
-        self.lr_scheduler_var.step()
-
+        # self.lr_scheduler_mean.step()
+        # self.lr_scheduler_var.step()
+        pass
 
 class CTDDQNAgent4VDN:
     def __init__(
@@ -243,8 +245,9 @@ class CTDDQNAgent4VDN:
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
     def lr_step(self):
-        self.lr_scheduler_mean.step()
-        self.lr_scheduler_var.step()
+        # self.lr_scheduler_mean.step()
+        # self.lr_scheduler_var.step()
+        pass
 
     def update_target_network(self):
         self.target_net_mean.load_state_dict(self.policy_net_mean.state_dict())
