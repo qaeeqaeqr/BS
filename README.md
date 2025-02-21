@@ -25,7 +25,7 @@ pettingzoo的atari环境均不可用。
 
 计划使用pettingzoo的以下环境：
 
-* from pettingzoo.sisl import pursuit_v4
+* cooperative_pong_v5: 环境预处理包括图像压缩、将两个相邻帧合并以表示小球方向。
 
 环境详见pettingzoo官方文档
 [pettingzoo](https://pettingzoo.farama.org/)。
@@ -68,6 +68,5 @@ pettingzoo的atari环境均不可用。
 funhpc服务器：ssh -p 46480 root@ykvvhm6pxtisq8ajsnow.deepln.com
 密码：X703IOrLrm3VyTGq3kpy0DdLjYuoeMdg
 
-
-2、阴影折线图展示算法鲁棒性。
+CTD-VDN。
 

@@ -64,7 +64,7 @@ class DQNAgent:
 
         self.policy_net = QNetMean(state_dim, action_dim).to(self.device)
         self.target_net = QNetMean(state_dim, action_dim).to(self.device)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
+        # self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
 
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
@@ -81,7 +81,6 @@ class DQNAgent:
             state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
             with torch.no_grad():
                 q_values = self.policy_net(state)
-                print(q_values)
             return torch.argmax(q_values).item()
 
     def update(self):

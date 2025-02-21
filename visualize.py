@@ -9,6 +9,9 @@ from algorithms.CTD_IQL import visualize_ctdiql, CTDIQL
 from algorithms.VDN import visualize_vdn, VDNAgent
 from algorithms.CTD_VDN import visualize_ctdvdn, CTDVDNAgent
 
+from utils import *
+import time
+
 pursuit = env_config.PersuitEnvConfig()
 pong = env_config.PongEnvConfig()
 connect4 = env_config.Connect4EnvConfig()
@@ -95,11 +98,11 @@ def visualize_IQL_on_pong():
         max_reward=pong.max_reward,
         off_screen_penalty=pong.off_screen_penalty,
         render_mode='human',
-        render_fps=25,
+        render_fps=35,
     )
 
     testing_iql = IQL(num_agents=2,
-                      state_dim=14*24,
+                      state_dim=48*28*2,
                       action_dim=pong.n_actions,
                       buffer_size=alg_config.buffer_size,
                       lr=alg_config.lr,

@@ -74,22 +74,30 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
         env.reset(seed=random.randint(0, 10000))  # env.reset(seed=seed)
         episode_reward = 0
 
+        last_observations = [None, None]  # 由于pong环境需要判断小球方向，故维每个智能体保存上一帧observation。
         for agent in env.agent_iter():
             agent_idx = int(agent.split('_')[-1])  # 根据环境信息获取agent编号
             total_step += 1
             observation, reward, termination, truncation, info = env.last()
             # 一些环境中，可以对observation进行预处理。
             if 'pong' in env_name.lower():
-                observation = pong_obs_preprocess(observation)
+                observation = pong_obs_preprocess(observation, agent_idx)
             if 'pursuit' in env_name.lower():
                 observation = pursuit_obs_preprocess(observation)
-            observation = observation.flatten()  # 将图像或二维数据都转成一维
+                observation = observation.flatten()  # 将图像或二维数据都转成一维
 
             # 选择动作
             if termination or truncation:
                 action = None
             else:
-                action = iql.select_actions(observation, agent_idx)
+                if 'pong' in env_name.lower():
+                    if last_observations[agent_idx] is not None:
+                        observation_concat = np.concatenate((last_observations[agent_idx], observation))
+                    else:
+                        observation_concat = np.concatenate((observation, observation))
+                    action = iql.select_actions(observation_concat, agent_idx)
+                else:
+                    action = iql.select_actions(observation, agent_idx)
             episode_reward += reward
             # print(agent, action)
 
@@ -99,12 +107,24 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
             # 将经验添加到replay buffer中
             next_observation, next_reward, termination, truncation, info = env.last()
             if 'pong' in env_name.lower():
-                next_observation = pong_obs_preprocess(next_observation)
+                next_observation = pong_obs_preprocess(next_observation, agent_idx)
             if 'pursuit' in env_name.lower():
                 next_observation = pursuit_obs_preprocess(next_observation)
-            next_observation = next_observation.flatten()
-            iql.add_experience(agent_idx,
-                               observation, action, next_reward, next_observation, termination)
+                next_observation = next_observation.flatten()
+
+            if 'pong' in env_name.lower():
+                if last_observations[agent_idx] is not None:
+                    observation_concat = np.concatenate((last_observations[agent_idx], observation))
+                else:
+                    observation_concat = np.concatenate((observation, observation))
+                next_observation_concat = np.concatenate((observation, next_observation))
+                iql.add_experience(agent_idx,
+                                   observation_concat, action, next_reward, next_observation_concat, termination)
+                last_observations[agent_idx] = observation
+
+            if 'pursuit' in env_name.lower():
+                iql.add_experience(agent_idx,
+                                   observation, action, next_reward, next_observation, termination)
 
             # 从经验池采样训练智能体
             iql.update(agent_idx)
@@ -159,13 +179,16 @@ def visualize_iql(env, iql, seed, env_name='default', load_path=None, video_path
     frames = []
     env.reset(seed=seed)
 
+    last_observations = [None, None]  # 由于pong环境需要判断小球方向，故维每个智能体保存上一帧observation。
     for agent in env.agent_iter():
+        agent_idx = int(agent.split('_')[-1])  # 根据环境信息获取agent编号
         observation, reward, termination, truncation, info = env.last()
         origin_observation = observation
         if 'pong' in env_name.lower():
-            observation = pong_obs_preprocess(observation)
+            observation = pong_obs_preprocess(observation, agent_idx)
         if 'pursuit' in env_name.lower():
             observation = pursuit_obs_preprocess(observation)
+            observation = observation.flatten()
 
         if 'pursuit' in env_name:
             frames.append(env.env.render())  # 对于pursuit的源码，这样调用可以获得全局观测。
@@ -176,10 +199,15 @@ def visualize_iql(env, iql, seed, env_name='default', load_path=None, video_path
         else:
             pass
 
+        if last_observations[agent_idx] is not None:
+            observation_concat = np.concatenate((last_observations[agent_idx], observation))
+        else:
+            observation_concat = np.concatenate((observation, observation))
+        last_observations[agent_idx] = observation
         if termination or truncation:
             action = None
         else:
-            action = iql.select_actions(observation.flatten(), int(agent.split('_')[-1]))
+            action = iql.select_actions(observation_concat, int(agent.split('_')[-1]))
 
         env.step(action)
     env.close()

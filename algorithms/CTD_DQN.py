@@ -16,7 +16,6 @@ class QNetMean(nn.Module):
             nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, output_dim),
-            nn.Softmax()
         )
 
     def forward(self, x):
@@ -32,7 +31,6 @@ class QNetVar(nn.Module):
             nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, output_dim),
-            nn.Softmax()
         )
 
     def forward(self, x):
@@ -64,7 +62,7 @@ class ReplayBuffer:
 class CTDDQNAgent:
     def __init__(
             self, state_dim, action_dim, buffer_size=10000, lr=1e-3, gamma=0.99,
-            epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.1, batch_size=64, device='cpu', zeta=0.1, lr_var=1e-5
+            epsilon=0.9, epsilon_decay=0.995, epsilon_min=0.1, batch_size=64, device='cpu', zeta=0.1, lr_var=1e-5
     ):
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -78,13 +76,13 @@ class CTDDQNAgent:
 
         self.policy_net_mean = QNetMean(state_dim, action_dim).to(self.device)
         self.target_net_mean = QNetMean(state_dim, action_dim).to(self.device)
-        self.target_net_mean.load_state_dict(self.policy_net_mean.state_dict())
+        # self.target_net_mean.load_state_dict(self.policy_net_mean.state_dict())
         self.target_net_mean.eval()
         self.optimizer_mean = optim.Adam(self.policy_net_mean.parameters(), lr=lr)
 
         self.policy_net_var = QNetVar(state_dim, action_dim).to(self.device)
         self.target_net_var = QNetVar(state_dim, action_dim).to(self.device)
-        self.target_net_var.load_state_dict(self.policy_net_var.state_dict())
+        # self.target_net_var.load_state_dict(self.policy_net_var.state_dict())
         self.target_net_var.eval()
         self.optimizer_var = optim.Adam(self.policy_net_var.parameters(), lr=lr_var)
 

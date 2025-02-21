@@ -6,12 +6,12 @@ base_dir = pathlib.Path(__file__).parent.parent
 
 # MARL
 buffer_size = 10000
-lr = 5e-4
+lr = 1e-3
 gamma = 0.99
-epsilon = 0.9
+epsilon = 0.95
 epsilon_decay = 0.999
-epsilon_min = 0.1
-batch_size = 64
+epsilon_min = 0.03
+batch_size = 128
 device = 'cuda' if cuda.is_available() else 'cpu'
 
 # CTD
@@ -19,7 +19,7 @@ zeta = 0.1  # 风险系数
 lr_var = 1e-5
 
 # train and test(visualize)
-num_episodes = 30000
+num_episodes = 20000
 train_seed = 42
 test_seed = 42
 

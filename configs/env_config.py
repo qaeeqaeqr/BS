@@ -1,5 +1,5 @@
 class PersuitEnvConfig:
-    max_cycles = 500
+    max_cycles = 300
     x_size = 16
     y_size = 16
     shared_reward = True

@@ -1,8 +1,11 @@
 import os
 import imageio
+import time
+import random
 
 import torch
 from .CTD_DQN import CTDDQNAgent
+from .env_preprocess import *
 
 import matplotlib.pyplot as plt
 
@@ -21,6 +24,7 @@ class CTDIQL:
                         action_dim=action_dim,
                         buffer_size=buffer_size,
                         lr=lr,
+                        gamma=gamma,
                         epsilon=epsilon,
                         epsilon_decay=epsilon_decay,
                         epsilon_min=epsilon_min,
@@ -79,20 +83,35 @@ def train_ctdiql(env, ctdiql, num_episodes, seed, env_name='default', save_path=
     total_step = 0
     episode_rewards = []
     for episode in range(num_episodes):
-        env.reset(seed=seed)
+        episode_start_time = time.time()
+        env.reset(seed=random.randint(0, 10000))
         episode_reward = 0
 
+        last_observations = [None, None]  # 由于pong环境需要判断小球方向，故维每个智能体保存上一帧observation。
         for agent in env.agent_iter():
             agent_idx = int(agent.split('_')[-1])  # 根据环境信息获取agent编号
             total_step += 1
             observation, reward, termination, truncation, info = env.last()
-            observation = observation.flatten()  # 将图像或二位数据都转成一维
+
+            # 一些环境中，可以对observation进行预处理。
+            if 'pong' in env_name.lower():
+                observation = pong_obs_preprocess(observation, agent_idx)
+            if 'pursuit' in env_name.lower():
+                observation = pursuit_obs_preprocess(observation)
+                observation = observation.flatten()  # 将图像或二维数据都转成一维
 
             # 选择动作
             if termination or truncation:
                 action = None
             else:
-                action = ctdiql.select_actions(observation, int(agent.split('_')[-1]))
+                if 'pong' in env_name.lower():
+                    if last_observations[agent_idx] is not None:
+                        observation_concat = np.concatenate((last_observations[agent_idx], observation))
+                    else:
+                        observation_concat = np.concatenate((observation, observation))
+                    action = ctdiql.select_actions(observation_concat, agent_idx)
+                else:
+                    action = ctdiql.select_actions(observation, agent_idx)
             episode_reward += reward
 
             # 执行动作
@@ -100,9 +119,25 @@ def train_ctdiql(env, ctdiql, num_episodes, seed, env_name='default', save_path=
 
             # 将经验添加到replay buffer中
             next_observation, next_reward, termination, truncation, info = env.last()
-            next_observation = next_observation.flatten()
-            ctdiql.add_experience(agent_idx,
-                               observation, action, next_reward, next_observation, termination)
+            if 'pong' in env_name.lower():
+                next_observation = pong_obs_preprocess(next_observation, agent_idx)
+            if 'pursuit' in env_name.lower():
+                next_observation = pursuit_obs_preprocess(next_observation)
+                next_observation = next_observation.flatten()
+
+            if 'pong' in env_name.lower():
+                if last_observations[agent_idx] is not None:
+                    observation_concat = np.concatenate((last_observations[agent_idx], observation))
+                else:
+                    observation_concat = np.concatenate((observation, observation))
+                next_observation_concat = np.concatenate((observation, next_observation))
+                ctdiql.add_experience(agent_idx,
+                                   observation_concat, action, next_reward, next_observation_concat, termination)
+                last_observations[agent_idx] = observation
+
+            if 'pursuit' in env_name.lower():
+                ctdiql.add_experience(agent_idx,
+                                   observation, action, next_reward, next_observation, termination)
 
             # 从经验池采样训练智能体
             ctdiql.update(agent_idx)
@@ -119,7 +154,9 @@ def train_ctdiql(env, ctdiql, num_episodes, seed, env_name='default', save_path=
         ctdiql.lr_step()
         ctdiql.update_epsilon()
 
-        print(f'Episode: {episode + 1}/{num_episodes}, Reward: {episode_reward}')
+        episode_end_time = time.time()
+        print(f'Episode: {episode + 1}/{num_episodes}, Reward: {episode_reward},'
+            f'Time: {round(episode_end_time - episode_start_time, 4)}s, Epsilon: {round(ctdiql.agents[0].epsilon, 4)}')
         episode_rewards.append(episode_reward)
 
     # 保存训练好的模型
@@ -153,21 +190,35 @@ def visualize_ctdiql(env, ctdiql, seed, env_name='default', load_path=None, vide
     frames = []
     env.reset(seed=seed)
 
+    last_observations = [None, None]  # 由于pong环境需要判断小球方向，故维每个智能体保存上一帧observation。
     for agent in env.agent_iter():
+        agent_idx = int(agent.split('_')[-1])  # 根据环境信息获取agent编号
         observation, reward, termination, truncation, info = env.last()
+        origin_observation = observation
+        if 'pong' in env_name.lower():
+            observation = pong_obs_preprocess(observation, agent_idx)
+        if 'pursuit' in env_name.lower():
+            observation = pursuit_obs_preprocess(observation)
+            observation = observation.flatten()
+
         if 'pursuit' in env_name:
             frames.append(env.env.render())  # 对于pursuit的源码，这样调用可以获得全局观测。
         elif 'pong' in env_name:
-            frames.append(observation)   # pong里面的观测是全局的
+            frames.append(origin_observation)
         elif 'connect' in env_name:
-            frames.append(env.state())   # connect4
+            frames.append(env.state())  # connect4
         else:
             pass
 
+        if last_observations[agent_idx] is not None:
+            observation_concat = np.concatenate((last_observations[agent_idx], observation))
+        else:
+            observation_concat = np.concatenate((observation, observation))
+        last_observations[agent_idx] = observation
         if termination or truncation:
             action = None
         else:
-            action = ctdiql.select_actions(observation.flatten(), int(agent.split('_')[-1]))
+            action = ctdiql.select_actions(observation_concat, int(agent.split('_')[-1]))
 
         env.step(action)
     env.close()
