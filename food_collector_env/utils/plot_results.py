@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 import pickle
 import os
+from itertools import combinations
 
 # Function that calculates moving average of a series
 def movingaverage(interval, window_size):
@@ -54,7 +55,7 @@ def shade_plot(file_paths: str):
         if file_name.endswith('.pkl') and file_name.startswith(prefix):
             target_files.append(folder + '/' + file_name)
 
-    target_files = _select(target_files)
+    target_files, std = _select(target_files)
     all_rewards = []
 
     # 读取pkl文件
@@ -78,15 +79,44 @@ def shade_plot(file_paths: str):
 
     plt.xlabel('Episode (*1000)')
     plt.ylabel('Reward')
-    plt.title('Rewards over Episodes with Standard Deviation Shaded')
+    plt.title(f'Rewards over Episodes with Standard Deviation Shaded (std:{round(std, 4)})')
 
     plt.savefig(f'{folder}/{prefix}_shaded.jpg', dpi=500)
 
-def _select(lst):
-    # 多训练几组，选其中一些来画阴影折线图。
-    idxes = [0, 1, 2, 3, 6]
-    return [lst[idxes[i]] for i in range(len(idxes))]
+
+def _select(file_paths):
+    """
+    从所有文件中选择5个文件的组合，计算每组的标准差，选择标准差最大的一组。
+
+    :param file_paths: 文件路径列表
+    :return: 选择的标准差最大的一组文件路径
+    """
+
+    # 生成所有可能的5个文件的组合
+    all_combinations = list(combinations(file_paths, 5))
+
+    max_std = -1
+    best_group = None
+
+    # 遍历所有组合，计算每组的标准差
+    for group in all_combinations:
+        all_rewards = []
+        for file_path in group:
+            with open(file_path, 'rb') as f:
+                data = pickle.load(f)
+            all_rewards.append(data)
+
+        # 计算当前组合的平均奖励和标准差
+        mean_rewards = np.mean(all_rewards, axis=0)
+        std_rewards = np.std(all_rewards, axis=0)
+
+        # 如果当前组合的标准差更大，则更新最佳组合
+        if np.mean(std_rewards) > max_std:
+            max_std = np.mean(std_rewards)
+            best_group = group
+
+    return best_group, max_std
 
 if __name__ == '__main__':
-    shade_plot('../outputs/iql_reward_')
+    plot_rewards('../outputs/ctdiql_zeta0.1_reward_2025-3-3 9:19:38.pkl')
 

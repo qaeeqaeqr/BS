@@ -18,7 +18,7 @@ NUM_EPISODES = 500000
 EPS_DECAY = 0.9999
 EPS_MIN = 0.2
 STEP_SIZE = 0.1
-STEP_SIZE_VAR = 0.01
+STEP_SIZE_VAR = 0.001
 GAMMA = 0.99
 ZETA = 0.1
 MAX_STEPS_DONE = 70
@@ -58,7 +58,7 @@ class QLearningAgent():
         if self.rand_generator.rand() < self.epsilon:
             action = self.rand_generator.randint(self.num_actions)  # random action selection
         else:
-            action = self.argmax(current_q - ZETA * current_q_var)  # greedy action selection (mean-var linear combination)
+            action = self.argmax(current_q - ZETA * np.sqrt(current_q_var))  # greedy action selection (mean-var linear combination)
 
         self.prev_state_idx = self.state_dict[state]
         self.prev_action = action
@@ -77,7 +77,7 @@ class QLearningAgent():
         if self.rand_generator.rand() < self.epsilon:
             action = self.rand_generator.randint(self.num_actions)
         else:
-            action = self.argmax(current_q + ZETA * current_q_var)
+            action = self.argmax(current_q + ZETA * np.sqrt(current_q_var))
 
         # Update q values
         delta = reward + self.gamma * self.q[state_idx][action] - self.q[self.prev_state_idx][self.prev_action]
@@ -85,7 +85,7 @@ class QLearningAgent():
         self.q_var[self.prev_state_idx][self.prev_action] = self.q_var[self.prev_state_idx][self.prev_action] + \
                                                             self.step_size_var * (delta**2 + self.q_var[state_idx][action] -
                                                                                   self.q_var[self.prev_state_idx][self.prev_action])
-
+        # print(self.q[self.prev_state_idx][self.prev_action], self.q_var[self.prev_state_idx][self.prev_action])
 
         self.prev_state_idx = self.state_dict[state]
         self.prev_action = action
@@ -112,7 +112,8 @@ class QLearningAgent():
 
         # Pick greedy action
         current_q = self.q[state_idx, :]
-        action = self.argmax(current_q)
+        current_q_var = self.q_var[state_idx, :]
+        action = self.argmax(current_q + ZETA * np.sqrt(current_q_var))
 
         return action
 
@@ -192,6 +193,7 @@ def train_QL_agents(n_agents, num_episodes, max_steps_done, eps_decay, eps_min, 
                 if episode % 1000 == 0:
                     for i in range(n_agents):
                         episode_rewards[i].append(sum(rewards_temp[i]))
+                        # print(sum(rewards_temp[i]))
                 epsilon_history.append(agents[0].epsilon)
                 break
 

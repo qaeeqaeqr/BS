@@ -50,35 +50,45 @@ class ReplayBuffer:
         return len(self.buffer)
 
 class QNet(nn.Module):
-    def __init__(self, observation_space, action_space, recurrent=False):
+    def __init__(self, observation_space, action_space, zeta=0.1, recurrent=False):
         super(QNet, self).__init__()
         self.num_agents = len(observation_space)
         self.recurrent = recurrent
         self.hx_size = 32
+        self.zeta = zeta
         for agent_i in range(self.num_agents):
             n_obs = observation_space[agent_i].shape[0]
-            setattr(self, 'agent_feature_{}'.format(agent_i), nn.Sequential(nn.Linear(n_obs, 64),
+            setattr(self, 'agent_feature_q_{}'.format(agent_i), nn.Sequential(nn.Linear(n_obs, 64),
+                                                                            nn.ReLU(),
+                                                                            nn.Linear(64, self.hx_size),
+                                                                            nn.ReLU()))
+            setattr(self, 'agent_feature_q_var_{}'.format(agent_i), nn.Sequential(nn.Linear(n_obs, 64),
                                                                             nn.ReLU(),
                                                                             nn.Linear(64, self.hx_size),
                                                                             nn.ReLU()))
             if recurrent:
                 setattr(self, 'agent_gru_{}'.format(agent_i), nn.GRUCell(self.hx_size, self.hx_size))
             setattr(self, 'agent_q_{}'.format(agent_i), nn.Linear(self.hx_size, action_space[agent_i].n))
+            setattr(self, 'agent_q_var_{}'.format(agent_i), nn.Linear(self.hx_size, action_space[agent_i].n))
 
     def forward(self, obs, hidden):
         q_values = [torch.empty(obs.shape[0], )] * self.num_agents
+        q_var_values = [torch.empty(obs.shape[0], )] * self.num_agents
         next_hidden = [torch.empty(obs.shape[0], 1, self.hx_size)] * self.num_agents
         for agent_i in range(self.num_agents):
-            x = getattr(self, 'agent_feature_{}'.format(agent_i))(obs[:, agent_i, :])
+            x_q = getattr(self, 'agent_feature_q_{}'.format(agent_i))(obs[:, agent_i, :])
+            x_q_var = getattr(self, 'agent_feature_q_var_{}'.format(agent_i))(obs[:, agent_i, :])
             if self.recurrent:
-                x = getattr(self, 'agent_gru_{}'.format(agent_i))(x, hidden[:, agent_i, :])
-                next_hidden[agent_i] = x.unsqueeze(1)
-            q_values[agent_i] = getattr(self, 'agent_q_{}'.format(agent_i))(x).unsqueeze(1)
+                x_q = getattr(self, 'agent_gru_{}'.format(agent_i))(x_q, hidden[:, agent_i, :])
+                next_hidden[agent_i] = x_q.unsqueeze(1)
+            q_values[agent_i] = getattr(self, 'agent_q_{}'.format(agent_i))(x_q).unsqueeze(1)
+            q_var_values[agent_i] = getattr(self, 'agent_q_var_{}'.format(agent_i))(x_q_var).unsqueeze(1)
 
-        return torch.cat(q_values, dim=1), torch.cat(next_hidden, dim=1)
+        return torch.cat(q_values, dim=1), torch.cat(q_var_values, dim=1), torch.cat(next_hidden, dim=1)
 
     def sample_action(self, obs, hidden, epsilon):
-        out, hidden = self.forward(obs, hidden)
+        q, q_var, hidden = self.forward(obs, hidden)
+        out = q - self.zeta * torch.sqrt(q_var)
         mask = (torch.rand((out.shape[0],)) <= epsilon)
         action = torch.empty((out.shape[0], out.shape[1],))
         action[mask] = torch.randint(0, out.shape[2], action[mask].shape).float()
@@ -89,7 +99,7 @@ class QNet(nn.Module):
         return torch.zeros((batch_size, self.num_agents, self.hx_size))
 
 
-def train(q, q_target, memory, optimizer, gamma, batch_size, update_iter=10, chunk_size=10, grad_clip_norm=5):
+def train(q, q_target, memory, optimizer, optimizer_var, gamma, zeta, batch_size, episode, update_iter=10, chunk_size=10, grad_clip_norm=1):
     _chunk_size = chunk_size if q.recurrent else 1
     for _ in range(update_iter):
         s, a, r, s_prime, done = memory.sample_chunk(batch_size, _chunk_size)
@@ -98,26 +108,35 @@ def train(q, q_target, memory, optimizer, gamma, batch_size, update_iter=10, chu
         target_hidden = q_target.init_hidden(batch_size)
         loss = 0
         for step_i in range(_chunk_size):
-            q_out, hidden = q(s[:, step_i, :, :], hidden)
+            q_out, q_var_out, hidden = q(s[:, step_i, :, :], hidden)
+
             q_a = q_out.gather(2, a[:, step_i, :].unsqueeze(-1).long()).squeeze(-1)
+            q_var_a = q_var_out.gather(2, a[:, step_i, :].unsqueeze(-1).long()).squeeze(-1)
             sum_q = q_a.sum(dim=1, keepdims=True)
+            sum_q_var = q_var_a.sum(dim=1, keepdims=True)
 
-            max_q_prime, target_hidden = q_target(s_prime[:, step_i, :, :], target_hidden.detach())
+            max_q_prime, max_q_var_prime, target_hidden = q_target(s_prime[:, step_i, :, :], target_hidden.detach())
             max_q_prime = max_q_prime.max(dim=2)[0].squeeze(-1)
-            target_q = r[:, step_i, :].sum(dim=1, keepdims=True)
-            target_q += gamma * max_q_prime.sum(dim=1, keepdims=True) * (1 - done[:, step_i])
-            # print(round(sum_q[0][0].item(), 5), round(target_q[0][0].item(), 5))
+            max_q_var_prime = max_q_var_prime.max(dim=2)[0].squeeze(-1)
 
-            loss += F.smooth_l1_loss(sum_q, target_q.detach())
+            target_q = r[:, step_i, :].sum(dim=1, keepdims=True) + gamma * max_q_prime.sum(dim=1, keepdims=True) * (1 - done[:, step_i])
+            target_q_var = torch.sqrt(torch.pow((target_q.detach() - sum_q), 2) +
+                            gamma * max_q_var_prime.sum(dim=1, keepdims=True) * (1 - done[:, step_i]))
+
+            loss += F.smooth_l1_loss(sum_q, target_q.detach()) + zeta * F.smooth_l1_loss(sum_q_var, target_q_var.detach())
+            # print(round(sum_q[0][0].item(), 5), round(target_q[0][0].item(), 5), '\t',
+            #       round(sum_q_var[0][0].item(), 5), round(target_q_var[0][0].item(), 5), '\t',)
 
             done_mask = done[:, step_i].squeeze(-1).bool()
             hidden[done_mask] = q.init_hidden(len(hidden[done_mask]))
             target_hidden[done_mask] = q_target.init_hidden(len(target_hidden[done_mask]))
 
         optimizer.zero_grad()
+        optimizer_var.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(q.parameters(), grad_clip_norm, norm_type=2)
+        torch.nn.utils.clip_grad_norm_(q.parameters(), grad_clip_norm)
         optimizer.step()
+        optimizer_var.step()
 
 
 def test(env, num_episodes, q):
@@ -140,7 +159,7 @@ def test(env, num_episodes, q):
     return score / num_episodes
 
 
-def train_VDN_agent(env_name, lr, gamma, batch_size, buffer_limit, log_interval, max_episodes, max_epsilon,
+def train_VDN_agent(env_name, lr, lr_var, zeta, gamma, batch_size, buffer_limit, log_interval, max_episodes, max_epsilon,
                     min_epsilon, test_episodes, warm_up_steps, update_iter, chunk_size, update_target_interval,
                     recurrent):
     # create env.
@@ -149,10 +168,14 @@ def train_VDN_agent(env_name, lr, gamma, batch_size, buffer_limit, log_interval,
     memory = ReplayBuffer(buffer_limit)
 
     # create networks
-    q = QNet(env.observation_space, env.action_space, recurrent)
-    q_target = QNet(env.observation_space, env.action_space, recurrent)
+    q = QNet(env.observation_space, env.action_space, zeta, recurrent)
+    q_target = QNet(env.observation_space, env.action_space, zeta, recurrent)
     q_target.load_state_dict(q.state_dict())
-    optimizer = optim.Adam(q.parameters(), lr=lr)
+
+    q_params = [p for name, p in q.named_parameters() if 'agent_q_' in name or 'agent_feature_q_' in name or 'gru' in name]
+    q_var_params = [p for name, p in q.named_parameters() if 'agent_q_var_' in name or 'agent_feature_q_var_' in name]
+    optimizer = optim.Adam(q_params, lr=lr)
+    optimizer_var = optim.Adam(q_var_params, lr=lr_var)
 
     # For performance monitoring
     n_agents = len(env.observation_space)
@@ -180,17 +203,17 @@ def train_VDN_agent(env_name, lr, gamma, batch_size, buffer_limit, log_interval,
 
                 if all(done) or step_counter > 70:
                     # log rewards
-                    if episode_i % 100 == 0:
-                        for i in range(n_agents):
-                            episode_rewards[i].append(sum(rewards_temp[i]))
+                    for i in range(n_agents):
+                        episode_rewards[i].append(sum(rewards_temp[i]))
                     epsilon_history.append(epsilon)
                     break
 
         if memory.size() > warm_up_steps:
-            train(q, q_target, memory, optimizer, gamma, batch_size, update_iter, chunk_size)
+            train(q, q_target, memory, optimizer, optimizer_var, gamma, zeta, batch_size, episode_i, update_iter, chunk_size)
 
         if episode_i % update_target_interval:
-            q_target.load_state_dict(q.state_dict())
+            for target_param, param in zip(q_target.parameters(), q.parameters()):
+                target_param.data.copy_(0.5 * param.data + 0.5 * target_param.data)
 
         if (episode_i + 1) % log_interval == 0:
             test_score = test(test_env, test_episodes, q)
@@ -256,6 +279,8 @@ if __name__ == '__main__':
 
     kwargs = {'env_name': 'dummy',
               'lr': 5e-4,
+              'lr_var': 5e-6,
+              'zeta': 0.1,
               'batch_size': 32,
               'gamma': 0.99,
               'buffer_limit': 30000, #50000
@@ -264,20 +289,20 @@ if __name__ == '__main__':
               'max_episodes': 25000,
               'max_epsilon': 0.9,
               'min_epsilon': 0.2,
-              'test_episodes': 3,
+              'test_episodes': 5,
               'warm_up_steps': 2000,
               'update_iter': 10,
-              'chunk_size': 10,
+              'chunk_size': 10,  # if not recurrent, internally, we use chunk_size of 1 and no gru cell is used.
               'recurrent': False}
     VDNagent, reward_history, epsilon_history = train_VDN_agent(**kwargs)
 
     team_rewards = [sum(x) for x in zip(*reward_history)]
-    with open(f'./outputs/vdn_reward_{train_start_time}.pkl', 'wb') as f:
+    with open(f'./outputs/ctdvdn_reward_{train_start_time}.pkl', 'wb') as f:
         pickle.dump(team_rewards, f)
 
     frames = visualise_VDN(VDNagent, n_episodes=3, epsilon=0)
     frames = [resize_frame(frame, scale=16) for frame in frames]
-    imageio.mimsave(f'./outputs/vdn_video_{train_start_time}.mp4', frames, fps=2)
+    imageio.mimsave(f'./outputs/ctdvdn_video_{train_start_time}.mp4', frames, fps=2)
 
 
 
