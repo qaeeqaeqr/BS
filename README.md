@@ -16,11 +16,16 @@ pip install torch==2.1.2 torchaudio==2.1.2 torchvision==0.16.2 -f https://mirror
 ````
 
 
+### Project
+
+主要实现两个环境，分别在[food_collector_env](food_collector_env)和
+[simple_high_variance_env](simple_high_variance_env)里；
+这两个文件夹里也包含iql、ma-ctd-iql、vdn、ma-ctd-vdn的算法实现及绘图。
+
+其余文件仍进一步开发中。
+
 ### todo
 
 funhpc服务器：ssh -p 46480 root@ykvvhm6pxtisq8ajsnow.deepln.com
 密码：X703IOrLrm3VyTGq3kpy0DdLjYuoeMdg
-
-ctd-iql 选动作没有用$sqrt(q_{var})$，改正后重新训练。
-ctd-vdn reward不上升，逐步打印检查q值过大或梯度问题
 

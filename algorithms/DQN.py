@@ -17,9 +17,9 @@ class QNetMean(nn.Module):
         self.network = nn.Sequential(
             nn.Linear(input_dim, 128),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(128, 32),
             nn.ReLU(),
-            nn.Linear(128, output_dim),
+            nn.Linear(32, output_dim),
         )
 
     def forward(self, x):
@@ -55,6 +55,7 @@ class DQNAgent:
     ):
         self.state_dim = state_dim
         self.action_dim = action_dim
+        self.buffer_size = buffer_size
         self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
@@ -65,13 +66,14 @@ class DQNAgent:
         self.policy_net = QNetMean(state_dim, action_dim).to(self.device)
         self.target_net = QNetMean(state_dim, action_dim).to(self.device)
         # self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.policy_net.train()
         self.target_net.eval()
 
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
         self.lr_scheduler = lr_scheduler.ExponentialLR(self.optimizer, gamma=0.9999)
-        self.criterion = nn.MSELoss()
+        self.criterion = nn.SmoothL1Loss()
 
-        self.replay_buffer = ReplayBuffer(buffer_size=buffer_size)
+        self.replay_buffer = ReplayBuffer(buffer_size=self.buffer_size)
 
     def select_action(self, state):
         # Epsilon-greedy 策略
@@ -84,7 +86,7 @@ class DQNAgent:
             return torch.argmax(q_values).item()
 
     def update(self):
-        if len(self.replay_buffer) < self.batch_size:
+        if len(self.replay_buffer) < self.buffer_size:
             return
 
         # 从经验回放池中采样
@@ -101,11 +103,13 @@ class DQNAgent:
         # 计算 Q 值
         current_q = self.policy_net(states).gather(1, actions)
         target_q = rewards + (1 - dones) * self.gamma * self.target_net(next_states).max(1, keepdim=True)[0]
+        # print(current_q[0][0].item(), target_q[0][0].item())
 
         # 更新策略网络
-        loss = self.criterion(current_q, target_q)
+        loss = self.criterion(current_q, target_q.detach())
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=5)
         self.optimizer.step()
 
     def epsilon_update(self):

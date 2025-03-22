@@ -5,13 +5,13 @@ import pathlib
 base_dir = pathlib.Path(__file__).parent.parent
 
 # MARL
-buffer_size = 10000
+buffer_size = 30000
 lr = 1e-3
 gamma = 0.99
 epsilon = 0.95
-epsilon_decay = 0.999
-epsilon_min = 0.03
-batch_size = 128
+epsilon_decay = 0.9999
+epsilon_min = 0.2
+batch_size = 64
 device = 'cuda' if cuda.is_available() else 'cpu'
 
 # CTD
@@ -19,7 +19,7 @@ zeta = 0.1  # 风险系数
 lr_var = 1e-5
 
 # train and test(visualize)
-num_episodes = 20000
+num_episodes = 250000
 train_seed = 42
 test_seed = 42
 
@@ -28,6 +28,7 @@ output_dir = os.path.join(base_dir, 'outputs')
 IQL_persuit_model_path = os.path.join(base_dir, 'models/IQL_persuit.pt')
 IQL_pong_model_path = os.path.join(base_dir, 'models/IQL_pong.pt')
 IQL_connect4_model_path = os.path.join(base_dir, 'models/IQL_connect4.pt')
+IQL_spread_model_path = os.path.join(base_dir, 'models/IQL_spread.pt')
 CTDIQL_persuit_model_path = os.path.join(base_dir, 'models/CTDIQL_persuit.pt')
 CTDIQL_pong_model_path = os.path.join(base_dir, 'models/CTDIQL_pong.pt')
 CTDIQL_connect4_model_path = os.path.join(base_dir, 'models/CTDIQL_connect4.pt')

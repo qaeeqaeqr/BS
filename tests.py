@@ -27,9 +27,9 @@ def pettingzoo_env_test():
     imageio.mimsave('./outputs/game_test.mp4', frames)
 
 def pettingzoo_env_test2():
-    from pettingzoo.atari import entombed_cooperative_v3
+    from pettingzoo.mpe import simple_spread_v3
 
-    env = entombed_cooperative_v3.env(render_mode="human")
+    env = simple_spread_v3.env(render_mode="human")
     env.reset(seed=42)
 
     for agent in env.agent_iter():
@@ -40,9 +40,10 @@ def pettingzoo_env_test2():
         else:
             # this is where you would insert your policy
             action = env.action_space(agent).sample()
+            print(agent, action, observation)
 
         env.step(action)
     env.close()
 
 if __name__ == "__main__":
-    pettingzoo_env_test()
+    pettingzoo_env_test2()

@@ -1,6 +1,7 @@
 from pettingzoo.sisl import pursuit_v4
 from pettingzoo.butterfly import cooperative_pong_v5
 from pettingzoo.classic import connect_four_v3
+from pettingzoo.mpe import simple_spread_v3
 
 from configs import alg_config, env_config
 
@@ -50,6 +51,48 @@ pong_env = cooperative_pong_v5.env(
 connect4_env = connect_four_v3.env(
     render_mode=connect4.render_mode
 )
+
+spread_env = simple_spread_v3.env(
+    N=3,
+    local_ratio=0.5,
+    max_cycles=250,
+    continuous_actions=False,
+)
+
+
+def train_IQL_on_spread():
+    training_env = simple_spread_v3.env(
+        N=3,
+        local_ratio=0.5,
+        max_cycles=25,
+        continuous_actions=False,
+    )
+
+    training_IQL = IQL(num_agents=3,
+                       state_dim=14,
+                       action_dim=5,
+                       buffer_size=alg_config.buffer_size,
+                       lr=alg_config.lr,
+                       gamma=alg_config.gamma,
+                       epsilon=alg_config.epsilon,
+                       epsilon_decay=alg_config.epsilon_decay,
+                       epsilon_min=alg_config.epsilon_min,
+                       batch_size=alg_config.batch_size,
+                       device=alg_config.device,)
+
+    train_start_time = (str(datetime.now().year) + '-' + str(datetime.now().month) + '-' + str(datetime.now().day) +
+                        ' ' + str(datetime.now().hour) + ':' + str(datetime.now().minute) + ':' + str(
+                datetime.now().second))
+
+    rewards = train_iql(training_env, training_IQL,
+                        num_episodes=alg_config.num_episodes,
+                        seed=alg_config.train_seed,
+                        env_name='train IQL in spread',
+                        save_path=alg_config.IQL_spread_model_path,
+                        load_path=None,
+                        fig_path=alg_config.output_dir)
+
+    save_list(rewards, f'./outputs/IQL_spread{train_start_time}.pkl')
 
 
 def train_IQL_on_pursuit():
@@ -324,4 +367,4 @@ def train_CTDVDN_on_pursuit():
 
 
 if __name__ == "__main__":
-    train_CTDIQL_on_pursuit()
+    train_IQL_on_spread()

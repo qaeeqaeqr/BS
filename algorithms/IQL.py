@@ -69,6 +69,7 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
 
     total_step = 0
     episode_rewards = []
+    iql.update_target_networks()
     for episode in range(num_episodes):
         episode_start_time = time.time()
         env.reset(seed=random.randint(0, 10000))  # env.reset(seed=seed)
@@ -85,6 +86,8 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
             if 'pursuit' in env_name.lower():
                 observation = pursuit_obs_preprocess(observation)
                 observation = observation.flatten()  # 将图像或二维数据都转成一维
+            if 'spread' in env_name.lower():
+                observation = spread_obs_preprocess(observation)
 
             # 选择动作
             if termination or truncation:
@@ -111,6 +114,8 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
             if 'pursuit' in env_name.lower():
                 next_observation = pursuit_obs_preprocess(next_observation)
                 next_observation = next_observation.flatten()
+            if 'spread' in env_name.lower():
+                next_observation = spread_obs_preprocess(next_observation)
 
             if 'pong' in env_name.lower():
                 if last_observations[agent_idx] is not None:
@@ -121,22 +126,22 @@ def train_iql(env, iql, num_episodes, seed, env_name='default', save_path=None, 
                 iql.add_experience(agent_idx,
                                    observation_concat, action, next_reward, next_observation_concat, termination)
                 last_observations[agent_idx] = observation
-
-            if 'pursuit' in env_name.lower():
+            else:
                 iql.add_experience(agent_idx,
                                    observation, action, next_reward, next_observation, termination)
 
-            # 从经验池采样训练智能体
-            iql.update(agent_idx)
-
-            # 每100步更新一次目标网络
-            if total_step % 100 == 0:
+            # 每500步更新一次目标网络
+            if total_step % 300 == 0:
                 iql.update_target_networks()
                 total_step = 0
 
             # 检查是否达到终止条件
             if termination or truncation:
                 break
+
+        # 从经验池采样训练智能体
+        for agent_idx in range(iql.num_agents):
+            iql.update(agent_idx)
 
         # 每个episode后更新学习率和epsilon
         iql.lr_step()

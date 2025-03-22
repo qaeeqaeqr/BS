@@ -1,0 +1,9 @@
+ctd-vdn-zeta1 food_env reward: -34.6
+ctd-vdn-zeta0.1 food_env reward: 46.32
+ctd-vdn-zeta0.01 food_env reward: 46.0
+vdn food_env reward: 40.32
+ctd-iql-zeta1 food_env reward: 44.16
+ctd-iql-zeta0.1 food_env reward: 46.4
+ctd-iql-zeta0.01 food_env reward: 45.72
+iql food_env reward: 44.88
+

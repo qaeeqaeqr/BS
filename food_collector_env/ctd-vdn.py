@@ -203,8 +203,9 @@ def train_VDN_agent(env_name, lr, lr_var, zeta, gamma, batch_size, buffer_limit,
 
                 if all(done) or step_counter > 70:
                     # log rewards
-                    for i in range(n_agents):
-                        episode_rewards[i].append(sum(rewards_temp[i]))
+                    if episode_i % 100 == 0:
+                        for i in range(n_agents):
+                            episode_rewards[i].append(sum(rewards_temp[i]))
                     epsilon_history.append(epsilon)
                     break
 
@@ -280,7 +281,7 @@ if __name__ == '__main__':
     kwargs = {'env_name': 'dummy',
               'lr': 5e-4,
               'lr_var': 5e-6,
-              'zeta': 0.1,
+              'zeta': 0.01,
               'batch_size': 32,
               'gamma': 0.99,
               'buffer_limit': 30000, #50000
@@ -297,12 +298,12 @@ if __name__ == '__main__':
     VDNagent, reward_history, epsilon_history = train_VDN_agent(**kwargs)
 
     team_rewards = [sum(x) for x in zip(*reward_history)]
-    with open(f'./outputs/ctdvdn_reward_{train_start_time}.pkl', 'wb') as f:
+    with open(f'./outputs/ctdvdn_zeta{kwargs["zeta"]}_reward_{train_start_time}.pkl', 'wb') as f:
         pickle.dump(team_rewards, f)
 
     frames = visualise_VDN(VDNagent, n_episodes=3, epsilon=0)
     frames = [resize_frame(frame, scale=16) for frame in frames]
-    imageio.mimsave(f'./outputs/ctdvdn_video_{train_start_time}.mp4', frames, fps=2)
+    imageio.mimsave(f'./outputs/ctdvdn_zeta{kwargs["zeta"]}_video_{train_start_time}.mp4', frames, fps=2)
 
 
 

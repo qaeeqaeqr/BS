@@ -23,3 +23,10 @@ def pursuit_obs_preprocess(observation):
     mean = observation.mean()
     std = observation.std()
     return (observation - mean) / std 
+
+
+def spread_obs_preprocess(observation):
+    observation = observation[:14]  # 智能体没有communication
+    mean = observation.mean()
+    std = observation.std()
+    return (observation - mean) / std

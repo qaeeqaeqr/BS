@@ -20,7 +20,7 @@ EPS_MIN = 0.2
 STEP_SIZE = 0.1
 STEP_SIZE_VAR = 0.001
 GAMMA = 0.99
-ZETA = 0.1
+ZETA = 0.01
 MAX_STEPS_DONE = 70
 
 class QLearningAgent():
