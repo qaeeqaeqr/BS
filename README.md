@@ -22,7 +22,7 @@ pip install torch==2.1.2 torchaudio==2.1.2 torchvision==0.16.2 -f https://mirror
 [simple_high_variance_env](simple_high_variance_env)里；
 这两个文件夹里也包含iql、ma-ctd-iql、vdn、ma-ctd-vdn的算法实现及绘图。
 
-其余文件仍进一步开发中。
+其余代码仍进一步开发中。
 
 ### todo
 

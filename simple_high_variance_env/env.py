@@ -12,7 +12,6 @@ class FoodCollectEnv:
         self.treasure = [self.grid_size-1, self.grid_size-1]  # 宝藏位置
 
     def reset(self):
-        # 随机初始化智能体位置
         self.state = [0, 0]
         self.state2 = [0, 0]
         return self._get_obs()
@@ -41,10 +40,10 @@ class FoodCollectEnv:
             self.state2[0] = min(self.grid_size - 1, self.state2[0] + 1)
 
         done = [False, False]
-        rewards = [0.0, 0.0]
+        rewards = [-0.001, -0.001]
 
         # 检查智能体1是否找到宝藏
-        if self.state == self.treasure or self.state == self.treasure:
+        if self.state == self.treasure or self.state2 == self.treasure:
             done[:] = [True, True]
             rewards[:] = [1, 1]
 
@@ -64,12 +63,12 @@ class FoodCollectEnv:
         # 智能体1的观测
         agent1_pos = self.state
         treasure_pos = self.treasure
-        relative_pos1 = np.concatenate([np.array(agent1_pos), np.array(treasure_pos) - np.array(agent1_pos)])
+        relative_pos1 = np.concatenate([np.array(agent1_pos), np.array(treasure_pos)])
         obs.append(relative_pos1)
         # 智能体2的观测
         agent2_pos = self.state2
         treasure_pos = self.treasure
-        relative_pos2 = np.concatenate([np.array(agent2_pos), np.array(treasure_pos) - np.array(agent2_pos)])
+        relative_pos2 = np.concatenate([np.array(agent2_pos), np.array(treasure_pos)])
         obs.append(relative_pos2)
         return obs
 
@@ -97,15 +96,50 @@ def visualize_env(env, grid_size=10, cell_size=50):
         image: PIL图像对象
     """
     # 创建一个黑色背景的图像
-    image = Image.new("RGB", (grid_size * cell_size, grid_size * cell_size), "black")
+    image = Image.new("RGB", ((grid_size + 2) * cell_size, (grid_size + 2) * cell_size), "black")
     draw = ImageDraw.Draw(image)
+
+    # 绘制墙壁（灰色）
+    wall_color = "grey"
+    for i in range(grid_size + 2):
+        # 上下墙壁
+        draw.rectangle(
+            [
+                (i * cell_size, 0),
+                ((i + 1) * cell_size, cell_size)
+            ],
+            fill=wall_color
+        )
+        draw.rectangle(
+            [
+                (i * cell_size, (grid_size + 1) * cell_size),
+                ((i + 1) * cell_size, (grid_size + 2) * cell_size)
+            ],
+            fill=wall_color
+        )
+    for i in range(grid_size + 2):
+        # 左右墙壁
+        draw.rectangle(
+            [
+                (0, i * cell_size),
+                (cell_size, (i + 1) * cell_size)
+            ],
+            fill=wall_color
+        )
+        draw.rectangle(
+            [
+                ((grid_size + 1) * cell_size, i * cell_size),
+                ((grid_size + 2) * cell_size, (i + 1) * cell_size)
+            ],
+            fill=wall_color
+        )
 
     # 绘制智能体1（红色）
     agent1_pos = tuple(env.state)
     draw.rectangle(
         [
-            (agent1_pos[0] * cell_size, agent1_pos[1] * cell_size),
-            ((agent1_pos[0] + 1) * cell_size, (agent1_pos[1] + 1) * cell_size)
+            ((agent1_pos[0] + 1) * cell_size, (agent1_pos[1] + 1) * cell_size),
+            ((agent1_pos[0] + 2) * cell_size, (agent1_pos[1] + 2) * cell_size)
         ],
         fill="red"
     )
@@ -114,8 +148,8 @@ def visualize_env(env, grid_size=10, cell_size=50):
     agent2_pos = tuple(env.state2)
     draw.rectangle(
         [
-            (agent2_pos[0] * cell_size, agent2_pos[1] * cell_size),
-            ((agent2_pos[0] + 1) * cell_size, (agent2_pos[1] + 1) * cell_size)
+            ((agent2_pos[0] + 1) * cell_size, (agent2_pos[1] + 1) * cell_size),
+            ((agent2_pos[0] + 2) * cell_size, (agent2_pos[1] + 2) * cell_size)
         ],
         fill="orange"
     )
@@ -124,8 +158,8 @@ def visualize_env(env, grid_size=10, cell_size=50):
     treasure_pos = tuple(env.treasure)
     draw.rectangle(
         [
-            (treasure_pos[0] * cell_size, treasure_pos[1] * cell_size),
-            ((treasure_pos[0] + 1) * cell_size, (treasure_pos[1] + 1) * cell_size)
+            ((treasure_pos[0] + 1) * cell_size, (treasure_pos[1] + 1) * cell_size),
+            ((treasure_pos[0] + 2) * cell_size, (treasure_pos[1] + 2) * cell_size)
         ],
         fill="green"
     )
@@ -134,5 +168,6 @@ def visualize_env(env, grid_size=10, cell_size=50):
 
 if __name__ == "__main__":
     env = FoodCollectEnv()
+    env.reset()
     img = visualize_env(env, grid_size=env.grid_size, cell_size=30)
     img.save('./outputs/env.png')

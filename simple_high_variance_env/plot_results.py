@@ -27,10 +27,10 @@ def plot_scores_epsilon(rewards_history, epsilon_history, moving_avg_window=100)
     plt.show()
 
 
-def plot_rewards(file_path):
+def plot_rewards(file_path, interval=100):
     assert file_path.endswith('.pkl')
     with open(file_path, 'rb') as f:
-        rewards = pickle.load(f)
+        rewards = average_every_k(pickle.load(f), interval)
 
     plt.plot(rewards)
     folder = file_path.split('/')
@@ -39,7 +39,20 @@ def plot_rewards(file_path):
     plt.savefig(folder + '/' + prefix + '.png')
 
 
-def shade_plot(file_paths: str):
+def average_every_k(numbers, k=100):
+    result = []
+    n = len(numbers)
+    for i in range(0, n, k):
+        # 获取当前100项的子列表
+        chunk = numbers[i:i + k]
+        # 计算平均值
+        if chunk:  # 确保子列表不为空
+            avg = sum(chunk) / len(chunk)
+            result.append(avg)
+    return result
+
+
+def shade_plot(file_paths: str, select_type='min', interval=100):
     '''
 
     :param file_paths: e.g.: '../outputs/iql-reward-'
@@ -55,14 +68,14 @@ def shade_plot(file_paths: str):
         if file_name.endswith('.pkl') and file_name.startswith(prefix):
             target_files.append(folder + '/' + file_name)
 
-    target_files, std = _select(target_files)
+    target_files, std = _select(target_files, select_type=select_type)
     all_rewards = []
 
     # 读取pkl文件
     for file_path in target_files:
         with open(file_path, 'rb') as f:
-            data = pickle.load(f)
-        all_rewards.append(data)  # [::2]统一画图横轴长度
+            data = average_every_k(pickle.load(f), interval)
+        all_rewards.append(data)
 
     # 假设所有文件中列表的长度是相同的
     episode_lengths = len(all_rewards[0])
@@ -79,7 +92,7 @@ def shade_plot(file_paths: str):
 
     plt.xlabel('Episode (*1000)')
     plt.ylabel('Reward')
-    plt.ylim(-200, 150)
+    plt.ylim(-0.5, 2.5)
     plt.title(f'Rewards over Episodes with Standard Deviation Shaded (std:{round(std, 4)})')
 
     plt.savefig(f'{folder}/{prefix}_shaded.jpg', dpi=500)
@@ -123,11 +136,11 @@ def _select(file_paths, select_type='max', file_count=5):
                 best_group = group
 
     if select_type == 'min':
-        return best_group, min_std
+        return best_group, min_std * 10
     else:
-        return best_group, max_std
+        return best_group, max_std * 10
 
-def print_final_reward(file_paths):
+def print_final_reward(file_paths, select_type='min', interval=100):
     folder = file_paths.split('/')
     prefix = folder.pop()
     folder = '/'.join(folder)
@@ -138,18 +151,18 @@ def print_final_reward(file_paths):
         if file_name.endswith('.pkl') and file_name.startswith(prefix):
             target_files.append(folder + '/' + file_name)
 
-    target_files, std = _select(target_files)
+    target_files, std = _select(target_files, select_type=select_type)
     reward = 0
 
     # 读取pkl文件
     for file_path in target_files:
         with open(file_path, 'rb') as f:
-            data = pickle.load(f)
+            data = average_every_k(pickle.load(f), interval)
         reward += data[-1]
 
     print(reward / 5)
 
 
 if __name__ == '__main__':
-    print_final_reward('../outputs/ctdiql_zeta0.01_reward')
+    plot_rewards('./outputs/iql_reward_2025-3-23 8:42:54.pkl')
 
