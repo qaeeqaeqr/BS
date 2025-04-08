@@ -276,7 +276,7 @@ if __name__ == '__main__':
     kwargs = {'env_name': 'dummy',
               'lr': 5e-4,
               'lr_var': 5e-6,
-              'zeta': 0.01,
+              'zeta': 1,
               'batch_size': 32,
               'gamma': 0.99,
               'buffer_limit': 20000, #50000

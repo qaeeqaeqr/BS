@@ -8,3 +8,8 @@
 /assets/*.aux
 /assets/*.log
 /assets/*.gz
+
+/plots_food_env/
+/plots_high_variance_env/
+/food_collector_env/outputs/
+/simple_high_variance_env/outputs/

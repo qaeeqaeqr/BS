@@ -9,8 +9,8 @@
 ### Environment
 
 ````
-conda create -n ctd-marl python=3.9
-conda activate ctd-marl
+conda create -n ma-ctd python=3.9
+conda activate ma-ctd
 pip install -r requirements.txt
 pip install torch==2.1.2 torchaudio==2.1.2 torchvision==0.16.2 -f https://mirrors.aliyun.com/pytorch-wheels/cu121
 ````
@@ -24,8 +24,4 @@ pip install torch==2.1.2 torchaudio==2.1.2 torchvision==0.16.2 -f https://mirror
 
 其余代码仍进一步开发中。
 
-### todo
-
-funhpc服务器：ssh -p 46480 root@ykvvhm6pxtisq8ajsnow.deepln.com
-密码：X703IOrLrm3VyTGq3kpy0DdLjYuoeMdg
 

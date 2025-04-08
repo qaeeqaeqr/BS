@@ -104,7 +104,7 @@ def train_iql_agents(zeta=0.1):
 
 if __name__ == "__main__":
     # 训练IQL智能体
-    zeta = 0.1
+    zeta = 1
     train_start_time = (str(datetime.now().year) + '-' + str(datetime.now().month) + '-' + str(datetime.now().day) +
                         ' ' + str(datetime.now().hour) + '-' + str(datetime.now().minute) + '-' + str(datetime.now().second))
     agent1, agent2, rewards = train_iql_agents(zeta=zeta)
