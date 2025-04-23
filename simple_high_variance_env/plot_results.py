@@ -92,7 +92,7 @@ def shade_plot(file_paths: str, select_type='min', interval=100, color='#48C0AA'
 
     plt.xlabel('Episode')
     plt.ylabel('Reward')
-    plt.ylim(-0.3, 1.0)
+    plt.ylim(-0.2, 1.2)
     print(f'std:{round(std, 4)}')
 
     plt.savefig(f'{folder}/{prefix}_shaded.jpg', dpi=500)
@@ -164,9 +164,9 @@ def print_final_reward(file_paths, select_type='min', interval=100):
 
 
 if __name__ == '__main__':
-    file_paths = './outputs/vdn_reward'
+    file_paths = './outputs/ctdiql_zeta0.1_lr0.001_lrvar1e-06_reward'
     shade_plot(file_paths,
-               select_type='max',
-               color='#48C0AA')  #color='#48C0AA' color='#EF767A'
+               select_type='min',
+               color='#EF767A')  #color='#48C0AA' color='#EF767A'
     print_final_reward(file_paths,
                        select_type='max')

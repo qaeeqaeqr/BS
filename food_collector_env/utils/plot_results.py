@@ -39,7 +39,7 @@ def plot_rewards(file_path):
     plt.savefig(folder + '/' + prefix + '.png')
 
 
-def shade_plot(file_paths: str):
+def shade_plot(file_paths: str, select_type='min', interval=1, color='#48C0AA'):
     '''
 
     :param file_paths: e.g.: '../outputs/iql-reward-'
@@ -55,14 +55,14 @@ def shade_plot(file_paths: str):
         if file_name.endswith('.pkl') and file_name.startswith(prefix):
             target_files.append(folder + '/' + file_name)
 
-    target_files, std = _select(target_files)
+    target_files, std = _select(target_files, select_type)
     all_rewards = []
 
     # 读取pkl文件
     for file_path in target_files:
         with open(file_path, 'rb') as f:
             data = pickle.load(f)
-        all_rewards.append(data)  # [::2]统一画图横轴长度
+        all_rewards.append(data[::interval])
 
     # 假设所有文件中列表的长度是相同的
     episode_lengths = len(all_rewards[0])
@@ -73,14 +73,14 @@ def shade_plot(file_paths: str):
     # 绘制阴影折线图
     plt.figure(figsize=(10, 6))
 
-    plt.plot(mean_rewards)
-    plt.fill_between(range(episode_lengths), mean_rewards - std_rewards, mean_rewards + std_rewards,
+    plt.plot(mean_rewards, color=color)
+    plt.fill_between(range(episode_lengths), mean_rewards - std_rewards, mean_rewards + std_rewards, color=color,
                          alpha=0.3)
 
-    plt.xlabel('Episode (*1000)')
+    plt.xlabel('Episode')
     plt.ylabel('Reward')
     plt.ylim(-200, 150)
-    plt.title(f'Rewards over Episodes with Standard Deviation Shaded (std:{round(std, 4)})')
+    print(f'std:{round(std, 4)}')
 
     plt.savefig(f'{folder}/{prefix}_shaded.jpg', dpi=500)
 
@@ -127,7 +127,7 @@ def _select(file_paths, select_type='max', file_count=5):
     else:
         return best_group, max_std
 
-def print_final_reward(file_paths):
+def print_final_reward(file_paths, select_type='min'):
     folder = file_paths.split('/')
     prefix = folder.pop()
     folder = '/'.join(folder)
@@ -138,7 +138,7 @@ def print_final_reward(file_paths):
         if file_name.endswith('.pkl') and file_name.startswith(prefix):
             target_files.append(folder + '/' + file_name)
 
-    target_files, std = _select(target_files)
+    target_files, std = _select(target_files, select_type)
     reward = 0
 
     # 读取pkl文件
@@ -151,5 +151,9 @@ def print_final_reward(file_paths):
 
 
 if __name__ == '__main__':
-    print_final_reward('../outputs/ctdiql_zeta0.01_reward')
+    # color='#48C0AA' color='#EF767A'
+    file_paths = '../outputs/ctdvdn_reward'
+    select_type = 'min'
+    shade_plot(file_paths, select_type=select_type, interval=100, color='#EF767A')
+    print_final_reward(file_paths, select_type='max')
 

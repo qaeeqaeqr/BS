@@ -45,8 +45,8 @@ def train_iql_agents():
     agent1 = IQLAgent(state_dim, action_dim)
     agent2 = IQLAgent(state_dim, action_dim)
     # 训练参数
-    episodes = 50000
-    log_interval = 100
+    episodes = 25000
+    log_interval = 50
     # 用于记录每个智能体的累计奖励
     total_rewards = [[], []]
 
@@ -91,12 +91,16 @@ def train_iql_agents():
                   f"Agent1 Reward: {np.mean(total_rewards[0][-log_interval:]):.2f}, "
                   f"Agent2 Reward: {np.mean(total_rewards[1][-log_interval:]):.2f}")
 
+    # for i in range(agent1.state_dim[0]):
+    #     for j in range(agent1.state_dim[1]):
+    #         print(f'({i}, {j}): ', agent1.q_table[i, j, :])
+
     return agent1, agent2, [total_rewards[0][i] + total_rewards[1][i] for i in range(len(total_rewards[0]))]
 
 if __name__ == "__main__":
     # 训练IQL智能体
     train_start_time = (str(datetime.now().year) + '-' + str(datetime.now().month) + '-' + str(datetime.now().day) +
-                        ' ' + str(datetime.now().hour) + ':' + str(datetime.now().minute) + ':' + str(datetime.now().second))
+                        ' ' + str(datetime.now().hour) + '-' + str(datetime.now().minute) + '-' + str(datetime.now().second))
     agent1, agent2, rewards = train_iql_agents()
     with open(f'./outputs/iql_reward_{train_start_time}.pkl', 'wb') as f:
         pickle.dump(rewards, f)

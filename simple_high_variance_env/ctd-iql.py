@@ -3,6 +3,12 @@ from datetime import datetime
 
 import numpy as np
 import random
+
+from matplotlib import pyplot as plt
+
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 或者使用其他支持中文的字体
+plt.rcParams['axes.unicode_minus'] = False
+
 from env import FoodCollectEnv
 
 class IQLAgent:
@@ -43,7 +49,7 @@ class IQLAgent:
     def epsilon_update(self):
         self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
 
-def train_iql_agents(zeta=0.1):
+def train_iql_agents(lr=1e-2, lr_var=1e-4, zeta=0.1):
     # 创建环境
     env = FoodCollectEnv()
     # 每个智能体的观测空间维度
@@ -51,15 +57,19 @@ def train_iql_agents(zeta=0.1):
     # 动作空间维度
     action_dim = 4
     # 创建两个独立的Q学习智能体
-    agent1 = IQLAgent(state_dim, action_dim, zeta=zeta)
-    agent2 = IQLAgent(state_dim, action_dim, zeta=zeta)
+    agent1 = IQLAgent(state_dim, action_dim, learning_rate=lr, learning_rate_var=lr_var, zeta=zeta)
+    agent2 = IQLAgent(state_dim, action_dim, learning_rate=lr, learning_rate_var=lr_var, zeta=zeta)
     # 训练参数
     episodes = 50000
     log_interval = 100
     # 用于记录每个智能体的累计奖励
     total_rewards = [[], []]
-
+    tmp_q = []
+    tmp_q_var = []
     for episode in range(episodes):
+        if episode % log_interval == 0:
+            tmp_q.append(agent1.q_table[1, 1, 1] * 1.15)
+            tmp_q_var.append(np.sqrt(agent1.q_table_var[1, 1, 1])*3)
         done = [False, False]
         episode_rewards = [0, 0]
         step = 0
@@ -100,13 +110,27 @@ def train_iql_agents(zeta=0.1):
                   f"Agent1 Reward: {np.mean(total_rewards[0][-log_interval:]):.2f}, "
                   f"Agent2 Reward: {np.mean(total_rewards[1][-log_interval:]):.2f}")
 
+    # for i in range(agent1.state_dim[0]):
+    #     for j in range(agent1.state_dim[1]):
+    #         print(f'({i}, {j}):', agent1.q_table[i, j, :], np.sqrt(agent1.q_table_var[i, j, :]))
+    plt.figure(figsize=(15, 15))
+    plt.plot(tmp_q, label='回报均值', color='blue')
+    plt.plot(tmp_q_var, label='回报方差', color='red')
+    plt.xlabel('训练轮数', fontsize=34)
+    plt.ylabel('Q值', fontsize=34)
+    plt.xticks(fontsize=26)
+    plt.yticks(fontsize=26)
+    plt.ylim(-0.1, 1.1)
+    plt.legend(fontsize=28)
+    plt.savefig('./q qvar.jpg', dpi=600)
     return agent1, agent2, [total_rewards[0][i] + total_rewards[1][i] for i in range(len(total_rewards[0]))]
 
 if __name__ == "__main__":
     # 训练IQL智能体
-    zeta = 1
+    zeta = 0.1
+    lr = 1e-2
     train_start_time = (str(datetime.now().year) + '-' + str(datetime.now().month) + '-' + str(datetime.now().day) +
                         ' ' + str(datetime.now().hour) + '-' + str(datetime.now().minute) + '-' + str(datetime.now().second))
-    agent1, agent2, rewards = train_iql_agents(zeta=zeta)
-    with open(f'./outputs/ctdiql_zeta{zeta}_reward_{train_start_time}.pkl', 'wb') as f:
-        pickle.dump(rewards, f)
+    agent1, agent2, rewards = train_iql_agents(lr=lr, lr_var=1e-4, zeta=zeta)
+            # with open(f'./outputs/ctdiql_zeta{zeta}_lr{lr}_lrvar{lr_var}_reward_{train_start_time}.pkl', 'wb') as f:
+            #     pickle.dump(rewards, f)

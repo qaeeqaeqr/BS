@@ -75,7 +75,10 @@ def shade_plot_multiple_algorithms(algorithm_data, select_type, interval=100, fi
             try:
                 with open(file_path, 'rb') as f:
                     data = pickle.load(f)
-                averaged_data = average_every_k(data, interval)
+                if count == 0:
+                    averaged_data = average_every_k(data, 2)
+                else:
+                    averaged_data = average_every_k(data, 2)
                 all_rewards.append(np.array(averaged_data))
             except Exception as e:
                 logging.error(f"读取文件 {file_path} 时出错: {e}")
@@ -187,9 +190,13 @@ if __name__ == '__main__':
     #     'α=1e-4': './outputs/ctdiql_zeta0.1_reward',
     #     'α=1e-5': './outputs/ctdiql_zeta0.1_lrvar1e-05_reward'
     # }
+    # algorithm_data = {
+    #     'VDN': './outputs/vdn_reward',
+    #     'MA-CTD-VDN': './outputs/ctdvdn_reward',
+    # }
     algorithm_data = {
-        'VDN': './outputs/vdn_reward',
-        'MA-CTD-VDN': './outputs/ctdvdn_zeta0.1_reward',
+        'IQL': './outputs/iql_reward',
+        'MA-CTD-IQL': './outputs/ctdiql_zeta0.1_reward',
     }
 
     shade_plot_multiple_algorithms(
@@ -201,6 +208,6 @@ if __name__ == '__main__':
         y_label='奖励',
         labelsize=28,
         ticksize=22,
-        ylim=(-0.2, 2.2),
-        save_path='./outputs/vdn_cmp.jpg'
+        ylim=(-50, 80),
+        save_path='./outputs/iql_cmp.jpg'
     )
