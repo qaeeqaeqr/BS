@@ -12,8 +12,8 @@ class FoodCollectEnv:
         self.treasure = [self.grid_size-1, self.grid_size-1]  # 宝藏位置
 
     def reset(self):
-        self.state = [0, 0]
-        self.state2 = [0, 0]
+        self.state = [9, 8]
+        self.state2 = [10, 10]
         return self._get_obs()
 
     def step(self, actions):
@@ -134,6 +134,15 @@ def visualize_env(env, grid_size=10, cell_size=50):
             fill=wall_color
         )
 
+    # 绘制宝藏（绿色）
+    treasure_pos = tuple(env.treasure)
+    draw.rectangle(
+        [
+            ((treasure_pos[0] + 1) * cell_size, (treasure_pos[1] + 1) * cell_size),
+            ((treasure_pos[0] + 2) * cell_size, (treasure_pos[1] + 2) * cell_size)
+        ],
+        fill="green"
+    )
     # 绘制智能体1（红色）
     agent1_pos = tuple(env.state)
     draw.rectangle(
@@ -154,15 +163,6 @@ def visualize_env(env, grid_size=10, cell_size=50):
         fill="orange"
     )
 
-    # 绘制宝藏（绿色）
-    treasure_pos = tuple(env.treasure)
-    draw.rectangle(
-        [
-            ((treasure_pos[0] + 1) * cell_size, (treasure_pos[1] + 1) * cell_size),
-            ((treasure_pos[0] + 2) * cell_size, (treasure_pos[1] + 2) * cell_size)
-        ],
-        fill="green"
-    )
 
     return image
 
